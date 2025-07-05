@@ -2,6 +2,7 @@ import React from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import MaxWidthWrapper from '@/components/layouts/MaxWidthWrapper'
+import Footer from '@/components/layouts/footer'
 
 const layout = (
     { children }: { children: React.ReactNode }
@@ -40,6 +41,7 @@ const layout = (
                         </div>
                     </div>
                 </MaxWidthWrapper>
+                <Footer />
             </div>
         </div>
     )
