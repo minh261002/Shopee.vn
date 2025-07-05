@@ -5,6 +5,7 @@ import { ArrowLeft, Edit, Trash2, Star, Calendar, Hash } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -105,13 +106,32 @@ const CategoryDetailPage = ({ params }: { params: Promise<{ id: string }> }) => 
                         <Edit className="h-4 w-4 mr-2" />
                         Chỉnh sửa
                     </Button>
-                    <Button
-                        variant="destructive"
-                        onClick={handleDelete}
-                    >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Xóa
-                    </Button>
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="destructive">
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Xóa
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Xác nhận xóa danh mục</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    Bạn có chắc chắn muốn xóa danh mục &quot;{category.name}&quot;?
+                                    Hành động này không thể hoàn tác và sẽ xóa vĩnh viễn danh mục này.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Hủy</AlertDialogCancel>
+                                <AlertDialogAction
+                                    onClick={handleDelete}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                    Xóa danh mục
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
                 </div>
             </div>
 
