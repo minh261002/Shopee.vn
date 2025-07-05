@@ -31,7 +31,7 @@ const VerifyRequestContent = () => {
                     otp: otp,
                     onSuccess: () => {
                         toast.success('Email xác thực thành công');
-                        router.push('/');
+                        router.push('/api/auth/callback');
                     },
                     onError: (error: ErrorContext) => {
                         toast.error(error.error?.message || 'Lỗi xác thực email');

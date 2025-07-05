@@ -26,7 +26,7 @@ const LoginForm = () => {
             try {
                 await signInSocialWithRecaptcha({
                     provider: "google",
-                    callbackURL: "/",
+                    callbackURL: "/api/auth/callback",
                     onSuccess: () => {
                         toast.info("Đang chuyển hướng...");
                     },

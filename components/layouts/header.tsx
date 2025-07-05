@@ -3,14 +3,19 @@ import Image from "next/image";
 import Link from "next/link";
 import { Bell, HelpCircle, ShoppingCart, StoreIcon, UserIcon } from "lucide-react";
 import MaxWidthWrapper from "./MaxWidthWrapper";
+import { authClient } from "@/lib/auth-client";
+import UserInfo from "./user-info";
 
 
 const categories = [
     "Áo Kiểu Nữ", "Tia La De", "Dép", "Sale 1k Điện Thoại iPhone", "Ốp Đẹp",
     "Đồ Ngủ Hello Kitty Nữ"
 ];
+const Header = () => {
+    const { data: session } = authClient.useSession();
 
-export default function Header() {
+    console.log(session?.user?.name);
+
     return (
         <header className="w-full" style={{
             background: "linear-gradient(-180deg, #f53d2d, #f63)",
@@ -35,9 +40,13 @@ export default function Header() {
                             <HelpCircle size={16} /> Hỗ Trợ
                         </Link>
                         <span>|</span>
-                        <Link href="/login" className="font-bold hover:underline flex items-center gap-1">
+                        {/* <Link href="/login" className="font-bold hover:underline flex items-center gap-1">
                             <UserIcon className="w-4 h-4" /> Đăng Nhập
-                        </Link>
+                        </Link> */}
+                        {session?.user ? <UserInfo name={session?.user?.name || ''} email={session?.user?.email || ''} image={session?.user?.image || ''} /> :
+                            <Link href="/login" className="font-bold hover:underline flex items-center gap-1">
+                                <UserIcon className="w-4 h-4" /> Đăng Nhập
+                            </Link>}
                     </div>
                 </div>
                 <div className="flex items-center justify-between pb-4 gap-16">
@@ -77,3 +86,5 @@ export default function Header() {
         </header>
     );
 }
+
+export default Header;

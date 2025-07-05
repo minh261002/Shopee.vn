@@ -4,6 +4,7 @@ import { admin } from "better-auth/plugins";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "./db";
 import { resend } from "./resend";
+import { User } from "@prisma/client";
 
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
@@ -28,7 +29,7 @@ export const auth = betterAuth({
     emailOTP({
       async sendVerificationOTP({ email, otp }) {
         await resend.emails.send({
-          from: "LMS <onboarding@resend.dev>",
+          from: "Shopee VN <onboarding@resend.dev>",
           to: [email],
           subject: "Verify your email",
           html: `<p>Your OTP is ${otp}</p>`,
@@ -41,4 +42,16 @@ export const auth = betterAuth({
       adminRoles: ["ADMIN"],
     }),
   ],
+  callbacks: {
+    async redirect({ user }: { user: User }) {
+      switch (user.role) {
+        case "ADMIN":
+          return "/admin/dashboard";
+        case "SELLER":
+          return "/seller/dashboard";
+        default:
+          return "/";
+      }
+    },
+  },
 });
