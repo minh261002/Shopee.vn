@@ -81,11 +81,11 @@ const UsersPage = () => {
     const getRoleBadge = (role: string) => {
         switch (role) {
             case 'ADMIN':
-                return <Badge variant="destructive">Quản trị viên</Badge>;
+                return <Badge variant="default">Quản trị viên</Badge>;
             case 'SELLER':
-                return <Badge variant="default">Chủ cửa hàng</Badge>;
+                return <Badge variant="secondary">Chủ cửa hàng</Badge>;
             case 'USER':
-                return <Badge variant="secondary">Khách hàng</Badge>;
+                return <Badge variant="outline">Khách hàng</Badge>;
             default:
                 return <Badge variant="outline">{role}</Badge>;
         }

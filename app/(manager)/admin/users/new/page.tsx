@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Save, User, Shield, Image as ImageIcon, Plus, ShoppingBag } from 'lucide-react';
+import { Save, User, Shield, Image as ImageIcon, Plus, ShoppingBag, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -45,7 +45,7 @@ const AddUserPage = () => {
         try {
             setIsLoading(true);
             await api.post('/admin/users', formData);
-            toast.success('Thêm người dùng thành công');
+            toast.success('Thêm tài khoản thành công');
             router.push('/admin/users');
         } catch (error) {
             console.error('Error creating user:', error);
@@ -64,9 +64,9 @@ const AddUserPage = () => {
             {/* Header */}
             <div className="flex items-center gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold">Thêm người dùng mới</h1>
+                    <h1 className="text-2xl font-bold">Thêm tài khoản mới</h1>
                     <p className="text-muted-foreground">
-                        Tạo tài khoản người dùng mới trong hệ thống
+                        Tạo tài khoản tài khoản mới trong hệ thống
                     </p>
                 </div>
             </div>
@@ -79,19 +79,19 @@ const AddUserPage = () => {
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2">
                                     <User className="h-5 w-5" />
-                                    Thông tin người dùng
+                                    Thông tin tài khoản
                                 </CardTitle>
                                 <CardDescription>
-                                    Điền thông tin cơ bản của người dùng
+                                    Điền thông tin cơ bản của tài khoản
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <Label htmlFor="name">Tên người dùng *</Label>
+                                        <Label htmlFor="name">Tên tài khoản *</Label>
                                         <Input
                                             id="name"
-                                            placeholder="Nhập tên người dùng"
+                                            placeholder="Nhập tên tài khoản"
                                             value={formData.name}
                                             onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                                             required
@@ -214,7 +214,7 @@ const AddUserPage = () => {
                                     Ảnh đại diện
                                 </CardTitle>
                                 <CardDescription>
-                                    Tải lên ảnh đại diện cho người dùng
+                                    Tải lên ảnh đại diện cho tài khoản
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
@@ -229,14 +229,28 @@ const AddUserPage = () => {
 
                         {/* Submit Button */}
                         <Card>
-                            <CardContent className="pt-6">
+                            <CardHeader>
+                                <CardTitle>Thao tác</CardTitle>
+                            </CardHeader>
+                            <CardContent className="flex gap-2">
                                 <Button
                                     type="submit"
-                                    className="w-full"
+                                    className="w-1/2"
                                     disabled={isLoading}
+                                    onClick={handleSubmit}
                                 >
                                     <Save className="h-4 w-4 mr-2" />
-                                    {isLoading ? 'Đang tạo...' : 'Tạo người dùng'}
+                                    {isLoading ? 'Đang tạo...' : 'Tạo tài khoản'}
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="w-1/2"
+                                    onClick={() => router.back()}
+                                    disabled={isLoading}
+                                >
+                                    <ArrowLeft className="h-4 w-4 mr-2" />
+                                    Quay lại
                                 </Button>
                             </CardContent>
                         </Card>
