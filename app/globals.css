@@ -3,6 +3,64 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Shopee Display Font Family */
+@font-face {
+  font-family: 'Shopee Display';
+  src: url('/fonts/ShopeeDisplay-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Shopee Display';
+  src: url('/fonts/ShopeeDisplay-Light.ttf') format('truetype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Shopee Display';
+  src: url('/fonts/ShopeeDisplay-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Shopee Display';
+  src: url('/fonts/ShopeeDisplay-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Shopee Display';
+  src: url('/fonts/ShopeeDisplay-ExtraBold.ttf') format('truetype');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Shopee Display';
+  src: url('/fonts/ShopeeDisplay-Black.ttf') format('truetype');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Shopee Text Font Family */
+@font-face {
+  font-family: 'Shopee Text';
+  src: url('/fonts/FVHShopeeText-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
