@@ -9,30 +9,8 @@ import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { api } from '@/lib/axios';
+import type { Category } from '@/types/category';
 
-interface Category {
-    id: string;
-    name: string;
-    slug: string;
-    image: string;
-    featured: boolean;
-    parentId?: string;
-    parent?: {
-        id: string;
-        name: string;
-        slug: string;
-    };
-    children?: {
-        id: string;
-        name: string;
-        slug: string;
-    }[];
-    _count?: {
-        children: number;
-    };
-    createdAt: string;
-    updatedAt: string;
-}
 
 const CategoryDetailPage = ({ params }: { params: Promise<{ id: string }> }) => {
     const { id } = use(params);

@@ -11,56 +11,12 @@ import { CloudinaryUpload } from '@/components/layouts/cloudinary-upload';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import slugify from "react-slugify";
 import { api } from '@/lib/axios';
-
-// Schema validation
-const categorySchema = z.object({
-    name: z.string().min(1, 'Tên danh mục là bắt buộc'),
-    slug: z.string().min(1, 'Slug là bắt buộc').regex(/^[a-z0-9-]+$/, 'Slug chỉ được chứa chữ thường, số và dấu gạch ngang'),
-    image: z.string().optional(),
-    featured: z.boolean(),
-    parentId: z.string().optional(),
-});
-
-type CategoryFormData = z.infer<typeof categorySchema>;
-
-interface Category {
-    id: string;
-    name: string;
-    slug: string;
-    image: string;
-    featured: boolean;
-    parentId?: string;
-    parent?: {
-        id: string;
-        name: string;
-        slug: string;
-    };
-    children?: {
-        id: string;
-        name: string;
-        slug: string;
-    }[];
-    _count?: {
-        children: number;
-    };
-    createdAt: string;
-    updatedAt: string;
-}
-
-interface CategoriesResponse {
-    categories: Category[];
-    pagination: {
-        page: number;
-        limit: number;
-        total: number;
-        totalPages: number;
-    };
-}
+import type { Category, CategoriesResponse } from '@/types/category';
+import { categorySchema, CategoryFormData } from '@/validations/category';
 
 const EditCategoryPage = ({ params }: { params: Promise<{ id: string }> }) => {
     const { id } = use(params);
@@ -321,10 +277,10 @@ const EditCategoryPage = ({ params }: { params: Promise<{ id: string }> }) => {
                         <CardHeader>
                             <CardTitle>Thao tác</CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-3">
+                        <CardContent className="flex gap-2">
                             <Button
                                 type="submit"
-                                className="w-full"
+                                className="w-1/2"
                                 disabled={isLoading}
                                 onClick={form.handleSubmit(onSubmit)}
                             >
@@ -334,7 +290,7 @@ const EditCategoryPage = ({ params }: { params: Promise<{ id: string }> }) => {
                             <Button
                                 type="button"
                                 variant="outline"
-                                className="w-full"
+                                className="w-1/2"
                                 onClick={() => router.back()}
                                 disabled={isLoading}
                             >

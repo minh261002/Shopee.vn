@@ -12,40 +12,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import Image from 'next/image';
 import { api } from '@/lib/axios';
-
-interface Category {
-    id: string;
-    name: string;
-    slug: string;
-    image: string;
-    featured: boolean;
-    parentId?: string;
-    parent?: {
-        id: string;
-        name: string;
-        slug: string;
-    };
-    children?: {
-        id: string;
-        name: string;
-        slug: string;
-    }[];
-    _count?: {
-        children: number;
-    };
-    createdAt: string;
-    updatedAt: string;
-}
-
-interface CategoriesResponse {
-    categories: Category[];
-    pagination: {
-        page: number;
-        limit: number;
-        total: number;
-        totalPages: number;
-    };
-}
+import type { Category, CategoriesResponse } from '@/types/category';
 
 const CategoryPage = () => {
     const [categories, setCategories] = useState<Category[]>([]);
