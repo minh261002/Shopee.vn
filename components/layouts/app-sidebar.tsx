@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import {
+  AppWindowMac,
   SquareTerminal,
 } from "lucide-react"
 
@@ -31,15 +32,30 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     navMainAdmin: [
       {
         title: "Bảng điều khiển",
-        url: "/admin",
+        url: "/admin/dashboard",
         icon: SquareTerminal,
         isActive: true,
       },
+      {
+        title: "Danh mục ",
+        url: "/admin/categories",
+        icon: AppWindowMac,
+        items: [
+          {
+            title: "Danh sách",
+            url: "/admin/categories",
+          },
+          {
+            title: "Thêm mới",
+            url: "/admin/categories/create",
+          },
+        ],
+      }
     ],
     navMainSeller: [
       {
         title: "Bảng điều khiển",
-        url: "/seller",
+        url: "/seller/dashboard",
         icon: SquareTerminal,
       },
     ],
@@ -56,7 +72,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent>
         <NavMain items={
           isAdmin ? data.navMainAdmin : data.navMainSeller
-        } />
+        } isAdmin={isAdmin} />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={data.user} />

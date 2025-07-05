@@ -3,6 +3,7 @@ import { Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { RecaptchaProvider } from "@/providers/recaptcha-provider";
+import QueryClientProvider from "@/providers/query-client"
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
@@ -28,7 +29,9 @@ export default function RootLayout({
         className={`${geistMono.variable} antialiased`}
       >
         <RecaptchaProvider>
-          {children}
+          <QueryClientProvider>
+            {children}
+          </QueryClientProvider>
           <Toaster
             position="top-center"
             richColors

@@ -4,6 +4,7 @@ import { ChevronRight, type LucideIcon } from "lucide-react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
+import { useState } from "react"
 
 import {
   Collapsible,
@@ -22,8 +23,10 @@ import {
 } from "@/components/ui/sidebar"
 
 export function NavMain({
+  isAdmin,
   items,
 }: {
+  isAdmin: boolean
   items: {
     title: string
     url: string
@@ -35,19 +38,19 @@ export function NavMain({
   }[]
 }) {
   const pathname = usePathname()
+  const [openItem, setOpenItem] = useState<string | null>(null)
 
   const isActiveUrl = (url: string) => {
-    // Handle both exact matches and sub-paths
-    return pathname === url || pathname.startsWith(`${url}/`)
+    return pathname === url
   }
 
   const hasActiveChild = (item: typeof items[0]) => {
-    return item.items?.some(subItem => isActiveUrl(subItem.url))
+    return item.items?.some(subItem => pathname === subItem.url)
   }
 
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>Platform</SidebarGroupLabel>
+      <SidebarGroupLabel>{isAdmin ? "For Administrators" : "For Sellers"}</SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => {
           const isActive = isActiveUrl(item.url)
@@ -60,7 +63,9 @@ export function NavMain({
                 <SidebarMenuButton
                   asChild
                   tooltip={item.title}
-                  className={cn(isActive && "bg-primary text-primary-foreground hover:bg-primary/90")}
+                  className={cn(
+                    isActive && "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground"
+                  )}
                 >
                   <Link href={item.url}>
                     {item.icon && <item.icon />}
@@ -75,7 +80,10 @@ export function NavMain({
             <Collapsible
               key={item.title}
               asChild
-              defaultOpen={isParentActive}
+              open={openItem === item.title || isParentActive}
+              onOpenChange={(isOpen) => {
+                setOpenItem(isOpen ? item.title : null)
+              }}
               className="group/collapsible"
             >
               <SidebarMenuItem>
@@ -97,7 +105,9 @@ export function NavMain({
                         <SidebarMenuSubItem key={subItem.title}>
                           <SidebarMenuSubButton
                             asChild
-                            className={cn(isSubActive && "bg-primary text-primary-foreground hover:bg-primary/90")}
+                            className={cn(
+                              isSubActive && "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground"
+                            )}
                           >
                             <Link href={subItem.url}>
                               <span>{subItem.title}</span>
