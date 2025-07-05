@@ -1,3 +1,4 @@
+"use client"
 
 import { AppSidebar } from "@/components/layouts/app-sidebar"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
@@ -7,7 +8,6 @@ const DashboardLayout = ({
 }: {
     children: React.ReactNode
 }) => {
-
     return (
         <SidebarProvider>
             <AppSidebar />

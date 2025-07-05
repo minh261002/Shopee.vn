@@ -123,3 +123,277 @@ model Category {
   @@index([parentId])
   @@map("categories")
 }
+
+// Banner, Slider, Carousel Management - Shopee Style
+enum ContentType {
+  HERO_BANNER // Banner chính trang chủ
+  FLASH_SALE_BANNER // Banner flash sale
+  CATEGORY_BANNER // Banner danh mục
+  BRAND_BANNER // Banner thương hiệu
+  PRODUCT_BANNER // Banner sản phẩm
+  PROMOTION_BANNER // Banner khuyến mãi
+  SEASONAL_BANNER // Banner theo mùa
+  SIDEBAR_BANNER // Banner sidebar
+  CHECKOUT_BANNER // Banner trang thanh toán
+  CART_BANNER // Banner giỏ hàng
+  SEARCH_BANNER // Banner trang tìm kiếm
+}
+
+enum ContentStatus {
+  DRAFT
+  PUBLISHED
+  SCHEDULED
+  ARCHIVED
+  PAUSED
+  EXPIRED
+}
+
+enum ContentPosition {
+  HOMEPAGE_HERO
+  HOMEPAGE_FEATURED
+  HOMEPAGE_SIDEBAR
+  CATEGORY_HEADER
+  CATEGORY_SIDEBAR
+  PRODUCT_DETAIL_TOP
+  PRODUCT_DETAIL_SIDEBAR
+  CHECKOUT_PAGE
+  CART_PAGE
+  SEARCH_RESULTS
+  FLASH_SALE_PAGE
+  BRAND_PAGE
+}
+
+enum TargetAudience {
+  ALL_USERS
+  NEW_USERS
+  RETURNING_USERS
+  PREMIUM_USERS
+  MOBILE_USERS
+  DESKTOP_USERS
+  SPECIFIC_LOCATION
+  SPECIFIC_DEVICE
+}
+
+enum GeographicTarget {
+  ALL_VIETNAM
+  NORTH_VIETNAM
+  CENTRAL_VIETNAM
+  SOUTH_VIETNAM
+  HANOI
+  HO_CHI_MINH
+  DA_NANG
+  SPECIFIC_CITY
+}
+
+model ContentBlock {
+  id          String          @id @default(uuid())
+  title       String
+  description String?         @db.Text
+  type        ContentType
+  status      ContentStatus   @default(DRAFT)
+  position    ContentPosition
+  priority    Int             @default(0)
+
+  // Display settings
+  startDate DateTime?
+  endDate   DateTime?
+  isActive  Boolean   @default(true)
+
+  // Targeting
+  targetAudience   TargetAudience   @default(ALL_USERS)
+  geographicTarget GeographicTarget @default(ALL_VIETNAM)
+  targetLocations  String?          @db.Text // JSON array of specific locations
+  targetDevices    String?          @db.Text // JSON array of devices
+  targetCategories String?          @db.Text // JSON array of category IDs
+  targetUserGroups String?          @db.Text // JSON array of user groups
+
+  // A/B Testing
+  abTestGroup  String? // A, B, C, etc.
+  abTestWeight Int     @default(50) // Percentage for this variant
+  abTestName   String? // Name of the A/B test
+
+  // Styling
+  backgroundColor String?
+  textColor       String?
+  customCSS       String? @db.Text
+
+  // Responsive settings
+  showOnMobile  Boolean @default(true)
+  showOnTablet  Boolean @default(true)
+  showOnDesktop Boolean @default(true)
+
+  // Performance tracking
+  clickTracking      Boolean @default(true)
+  impressionTracking Boolean @default(true)
+  conversionTracking Boolean @default(true)
+
+  // Shopee specific
+  isFlashSale      Boolean   @default(false)
+  flashSaleEndTime DateTime?
+  discountPercent  Int? // Percentage discount
+  originalPrice    Float? // Original price
+  salePrice        Float? // Sale price
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  items         ContentItem[]
+  campaignId    String?
+  campaign      Campaign?          @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  analytics     ContentAnalytics[]
+  abTestResults ABTestResult[]
+  createdBy     String?
+  updatedBy     String?
+
+  @@index([type, status])
+  @@index([position, isActive])
+  @@index([startDate, endDate])
+  @@index([campaignId])
+  @@index([targetAudience])
+  @@index([geographicTarget])
+  @@index([isFlashSale])
+  @@map("content_blocks")
+}
+
+model ContentItem {
+  id             String       @id @default(uuid())
+  contentBlockId String
+  contentBlock   ContentBlock @relation(fields: [contentBlockId], references: [id], onDelete: Cascade)
+
+  // Content details
+  title       String?
+  subtitle    String?
+  description String? @db.Text
+  image       String  @db.Text
+  imageAlt    String?
+
+  // Link settings
+  linkUrl      String?
+  linkText     String?
+  openInNewTab Boolean @default(false)
+
+  // Shopee specific
+  productId  String? // Link to specific product
+  categoryId String? // Link to specific category
+  brandId    String? // Link to specific brand
+
+  // Display order
+  order Int @default(0)
+
+  // Additional data (JSON)
+  metadata String? @db.Text // JSON string for additional data
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([contentBlockId, order])
+  @@index([productId])
+  @@index([categoryId])
+  @@index([brandId])
+  @@map("content_items")
+}
+
+// Campaign Management - Shopee Style
+model Campaign {
+  id          String        @id @default(uuid())
+  name        String
+  description String?       @db.Text
+  status      ContentStatus @default(DRAFT)
+
+  // Campaign period
+  startDate DateTime?
+  endDate   DateTime?
+
+  // Budget and goals
+  budget            Float?
+  targetImpressions Int?
+  targetClicks      Int?
+  targetConversions Int?
+  targetRevenue     Float?
+
+  // Target settings
+  targetAudience   TargetAudience   @default(ALL_USERS)
+  geographicTarget GeographicTarget @default(ALL_VIETNAM)
+  targetLocations  String?          @db.Text // JSON string for audience targeting
+  targetDevices    String?          @db.Text // JSON string for device targeting
+  targetCategories String?          @db.Text // JSON string for category targeting
+  conditions       String?          @db.Text // JSON string for display conditions
+
+  // Shopee specific
+  campaignType String? // FLASH_SALE, SEASONAL, BRAND, etc.
+  isFeatured   Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  contentBlocks ContentBlock[]
+
+  @@index([status, startDate, endDate])
+  @@index([targetAudience])
+  @@index([geographicTarget])
+  @@index([campaignType])
+  @@map("campaigns")
+}
+
+// Analytics for content performance - Shopee Style
+model ContentAnalytics {
+  id             String       @id @default(uuid())
+  contentBlockId String
+  contentBlock   ContentBlock @relation(fields: [contentBlockId], references: [id], onDelete: Cascade)
+
+  // Metrics
+  impressions Int   @default(0)
+  clicks      Int   @default(0)
+  conversions Int   @default(0)
+  revenue     Float @default(0)
+
+  // Device breakdown
+  mobileImpressions  Int @default(0)
+  tabletImpressions  Int @default(0)
+  desktopImpressions Int @default(0)
+
+  // Geographic breakdown
+  northImpressions   Int @default(0)
+  centralImpressions Int @default(0)
+  southImpressions   Int @default(0)
+
+  // Time breakdown
+  hourOfDay Int? // 0-23
+  dayOfWeek Int? // 0-6 (Sunday = 0)
+
+  // Date tracking
+  date DateTime @default(now())
+
+  @@unique([contentBlockId, date])
+  @@index([date])
+  @@index([hourOfDay])
+  @@index([dayOfWeek])
+  @@map("content_analytics")
+}
+
+// A/B Test Results - Shopee Style
+model ABTestResult {
+  id             String       @id @default(uuid())
+  contentBlockId String
+  contentBlock   ContentBlock @relation(fields: [contentBlockId], references: [id], onDelete: Cascade)
+
+  testGroup   String // A, B, C, etc.
+  testName    String? // Name of the test
+  impressions Int     @default(0)
+  clicks      Int     @default(0)
+  conversions Int     @default(0)
+  revenue     Float   @default(0)
+
+  // Conversion rate
+  clickRate      Float @default(0)
+  conversionRate Float @default(0)
+
+  date DateTime @default(now())
+
+  @@unique([contentBlockId, testGroup, date])
+  @@index([date])
+  @@index([testName])
+  @@map("ab_test_results")
+}
