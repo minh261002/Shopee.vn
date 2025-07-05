@@ -1,5 +1,6 @@
 import { betterAuth } from "better-auth";
 import { emailOTP } from "better-auth/plugins";
+import { admin } from "better-auth/plugins";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "./db";
 import { resend } from "./resend";
@@ -25,6 +26,11 @@ export const auth = betterAuth({
           html: `<p>Your OTP is ${otp}</p>`,
         });
       },
+    }),
+    admin({
+      defaultRole: "USER",
+      sellerRoles: ["SELLER"],
+      adminRoles: ["ADMIN"],
     }),
   ],
 });

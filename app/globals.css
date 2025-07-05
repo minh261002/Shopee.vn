@@ -86,14 +86,14 @@
   --chart-3: oklch(0.5500 0.2200 263);
   --chart-4: oklch(0.4900 0.2200 264);
   --chart-5: oklch(0.4200 0.1800 266);
-  --sidebar: oklch(0.9750 0.1200 30);
-  --sidebar-foreground: oklch(0.3500 0.1700 30);
-  --sidebar-primary: oklch(0.5500 0.2300 30);
-  --sidebar-primary-foreground: oklch(0.9800 0 0);
-  --sidebar-accent: oklch(0.9700 0.1000 30);
-  --sidebar-accent-foreground: oklch(0.3500 0.1700 30);
-  --sidebar-border: oklch(0.9000 0.0200 30);
-  --sidebar-ring: oklch(0.7000 0.1000 30);
+  --sidebar: oklch(0.9850 0 0);
+  --sidebar-foreground: oklch(0.1450 0 0);
+  --sidebar-primary: oklch(0.2050 0 0);
+  --sidebar-primary-foreground: oklch(0.9850 0 0);
+  --sidebar-accent: oklch(0.9700 0 0);
+  --sidebar-accent-foreground: oklch(0.2050 0 0);
+  --sidebar-border: oklch(0.9220 0 0);
+  --sidebar-ring: oklch(0.7080 0 0);
   --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
   --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
@@ -143,10 +143,6 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-mono);
-  --font-serif: var(--font-serif);
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);

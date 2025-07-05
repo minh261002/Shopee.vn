@@ -1,4 +1,4 @@
-import { authClient } from "@/providers/auth-client";
+import { authClient } from "@/lib/auth-client";
 import { useRecaptcha } from "./use-recaptcha";
 import { ErrorContext } from "better-auth/react";
 

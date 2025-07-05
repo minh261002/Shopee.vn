@@ -1,6 +1,6 @@
 "use client";
 
-import { authClient } from "@/providers/auth-client";
+import { authClient } from "@/lib/auth-client";
 import { ErrorContext } from "better-auth/react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
