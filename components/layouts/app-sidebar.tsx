@@ -47,9 +47,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           },
           {
             title: "Thêm mới",
-            url: "/admin/categories/create",
+            url: "/admin/categories/new",
           },
-        ],
+        ]
       }
     ],
     navMainSeller: [
@@ -72,7 +72,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent>
         <NavMain items={
           isAdmin ? data.navMainAdmin : data.navMainSeller
-        } isAdmin={isAdmin} />
+        } />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={data.user} />

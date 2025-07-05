@@ -23,10 +23,8 @@ import {
 } from "@/components/ui/sidebar"
 
 export function NavMain({
-  isAdmin,
   items,
 }: {
-  isAdmin: boolean
   items: {
     title: string
     url: string
@@ -50,7 +48,7 @@ export function NavMain({
 
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>{isAdmin ? "For Administrators" : "For Sellers"}</SidebarGroupLabel>
+      <SidebarGroupLabel>Platform</SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => {
           const isActive = isActiveUrl(item.url)
