@@ -30,24 +30,28 @@ const VerifyRequestContent = () => {
                     email: email,
                     otp: otp,
                     onSuccess: () => {
-                        toast.success('Email verified successfully');
+                        toast.success('Email xác thực thành công');
                         router.push('/');
                     },
                     onError: (error: ErrorContext) => {
-                        toast.error(error.error?.message || 'Failed to verify email');
+                        toast.error(error.error?.message || 'Lỗi xác thực email');
                     }
                 });
             } catch {
-                toast.error("reCAPTCHA verification failed. Please try again.");
+                toast.error("Lỗi xác thực reCAPTCHA. Vui lòng thử lại.");
             }
         })
     }
 
     return (
-        <Card>
+        <Card className='w-[400px] py-10'>
             <CardHeader className='text-center'>
-                <CardTitle className='text-xl'>Please check your email</CardTitle>
-                <CardDescription>We have sent a verification code to your email address. Please enter the code below.</CardDescription>
+                <CardTitle className='text-xl'>
+                    Vui lòng kiểm tra email của bạn
+                </CardTitle>
+                <CardDescription>
+                    Chúng tôi đã gửi mã xác thực đến địa chỉ email của bạn. Vui lòng nhập mã bên dưới.
+                </CardDescription>
             </CardHeader>
 
             <CardContent className='flex flex-col gap-4 items-center'>
@@ -64,7 +68,7 @@ const VerifyRequestContent = () => {
                     </InputOTP>
                 </div>
                 <span className='text-sm text-muted-foreground'>
-                    Enter the code sent to your email address.
+                    Nhập mã đã gửi đến địa chỉ email của bạn.
                 </span>
 
                 <Button
@@ -78,26 +82,26 @@ const VerifyRequestContent = () => {
                         ) : (
                             <>
                                 <MailCheckIcon className='w-4 h-4' />
-                                Verify
+                                Xác thực
                             </>
                         )
                     }
                 </Button>
 
                 <Link href={`/login?email=${email}`} className='text-sm text-muted-foreground'>
-                    Didn&apos;t receive the code? <span className='text-primary'>Resend</span>
+                    Không nhận được mã? <span className='text-primary'>Gửi lại</span>
                 </Link>
 
                 <p className='text-xs text-muted-foreground text-center mt-2'>
-                    This site is protected by reCAPTCHA and the Google{' '}
+                    Trang web này được bảo vệ bởi reCAPTCHA và Google <br />
                     <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                        Privacy Policy
+                        Chính sách bảo mật
                     </a>{' '}
-                    and{' '}
+                    và{' '}
                     <a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                        Terms of Service
+                        Điều khoản dịch vụ
                     </a>{' '}
-                    apply.
+                    được áp dụng.
                 </p>
             </CardContent>
         </Card>
