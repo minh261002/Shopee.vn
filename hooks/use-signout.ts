@@ -12,10 +12,10 @@ export function useSignOut() {
       fetchOptions: {
         onSuccess: () => {
           router.push("/");
-          toast.success("Logged out successfully");
+          toast.success("Đăng xuất thành công");
         },
         onError: (error: ErrorContext) => {
-          toast.error(error.error?.message || "Failed to sign out");
+          toast.error(error.error?.message || "Đăng xuất thất bại");
         },
       },
     });

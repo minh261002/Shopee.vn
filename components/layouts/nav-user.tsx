@@ -29,6 +29,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
+import { useSignOut } from "@/hooks/use-signout"
 
 export function NavUser({
   user,
@@ -40,7 +41,7 @@ export function NavUser({
   }
 }) {
   const { isMobile } = useSidebar()
-
+  const { handleSignOut } = useSignOut()
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -102,9 +103,9 @@ export function NavUser({
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
               <LogOut />
-              Log out
+              Đăng xuất
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
