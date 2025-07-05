@@ -40,8 +40,7 @@ api.interceptors.response.use(
           break;
         case 401:
           toast.error("Phiên đăng nhập đã hết hạn");
-          // Redirect to login if needed
-          break;
+          window.location.href = "/login";
         case 403:
           toast.error("Bạn không có quyền thực hiện hành động này");
           break;

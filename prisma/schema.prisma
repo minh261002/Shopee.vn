@@ -85,17 +85,25 @@ model Verification {
 }
 
 model UserAddress {
-  id        String   @id @default(uuid())
+  id        String      @id @default(uuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  address   String   @db.Text
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  address   String      @db.Text
+  type      AddressType @default(HOME)
   lat       Float?
   lng       Float?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  isDefault Boolean     @default(false)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
 
   @@index([userId])
   @@map("user_addresses")
+}
+
+enum AddressType {
+  HOME
+  WORK
+  OTHER
 }
 
 model Category {

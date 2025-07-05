@@ -4,6 +4,7 @@ import * as React from "react"
 import {
   AppWindowMac,
   SquareTerminal,
+  Users,
 } from "lucide-react"
 
 import { NavMain } from "@/components/layouts/nav-main"
@@ -48,6 +49,21 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           {
             title: "Thêm mới",
             url: "/admin/categories/new",
+          },
+        ]
+      },
+      {
+        title: "Tài khoản",
+        url: "/admin/users",
+        icon: Users,
+        items: [
+          {
+            title: "Danh sách",
+            url: "/admin/users",
+          },
+          {
+            title: "Thêm mới",
+            url: "/admin/users/new",
           },
         ]
       }
