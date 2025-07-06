@@ -134,8 +134,8 @@ export async function PUT(
       name?: string;
       description?: string;
       status?: ContentStatus;
-      startDate?: string;
-      endDate?: string;
+      startDate?: Date | null;
+      endDate?: Date | null;
       budget?: number;
       targetImpressions?: number;
       targetClicks?: number;
@@ -149,15 +149,41 @@ export async function PUT(
       conditions?: string;
       campaignType?: CampaignType;
       isFeatured?: boolean;
-    } = {
-      ...validatedData,
-    };
+    } = {};
 
-    if (validatedData.startDate) {
-      updateData.startDate = validatedData.startDate;
+    // Copy non-date fields
+    if (validatedData.name !== undefined) updateData.name = validatedData.name;
+    if (validatedData.description !== undefined)
+      updateData.description = validatedData.description;
+    if (validatedData.status !== undefined)
+      updateData.status = validatedData.status;
+    if (validatedData.targetAudience !== undefined)
+      updateData.targetAudience = validatedData.targetAudience;
+    if (validatedData.geographicTarget !== undefined)
+      updateData.geographicTarget = validatedData.geographicTarget;
+    if (validatedData.targetLocations !== undefined)
+      updateData.targetLocations = validatedData.targetLocations;
+    if (validatedData.targetDevices !== undefined)
+      updateData.targetDevices = validatedData.targetDevices;
+    if (validatedData.targetCategories !== undefined)
+      updateData.targetCategories = validatedData.targetCategories;
+    if (validatedData.conditions !== undefined)
+      updateData.conditions = validatedData.conditions;
+    if (validatedData.campaignType !== undefined)
+      updateData.campaignType = validatedData.campaignType;
+    if (validatedData.isFeatured !== undefined)
+      updateData.isFeatured = validatedData.isFeatured;
+
+    // Handle date fields with conversion
+    if (validatedData.startDate !== undefined) {
+      updateData.startDate = validatedData.startDate
+        ? new Date(validatedData.startDate)
+        : null;
     }
-    if (validatedData.endDate) {
-      updateData.endDate = validatedData.endDate;
+    if (validatedData.endDate !== undefined) {
+      updateData.endDate = validatedData.endDate
+        ? new Date(validatedData.endDate)
+        : null;
     }
     if (validatedData.budget !== undefined) {
       updateData.budget = Number(validatedData.budget);
