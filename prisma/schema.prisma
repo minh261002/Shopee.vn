@@ -21,29 +21,40 @@ enum UserStatus {
 }
 
 model User {
-  id             String          @id @default(uuid())
-  name           String          @db.Text
-  email          String
-  emailVerified  Boolean
-  image          String?         @db.Text
-  role           Role            @default(USER)
-  createdAt      DateTime
-  updatedAt      DateTime
-  sessions       Session[]
-  accounts       Account[]
-  addresses      UserAddress[]
-  stores         Store[]
-  orders         Order[]
-  carts          Cart[]
-  wishlists      Wishlist[]
-  productReviews ProductReview[]
-  storeReviews   StoreReview[]
-  storeFollowers StoreFollower[]
-  notifications  Notification[]
-  couponUsages   CouponUsage[]
-  returnRequests ReturnRequest[]
-  loyaltyAccount LoyaltyAccount?
-  supportTickets SupportTicket[]
+  id              String                  @id @default(uuid())
+  name            String                  @db.Text
+  email           String
+  emailVerified   Boolean
+  image           String?                 @db.Text
+  role            Role                    @default(USER)
+  createdAt       DateTime
+  updatedAt       DateTime
+  sessions        Session[]
+  accounts        Account[]
+  addresses       UserAddress[]
+  stores          Store[]
+  orders          Order[]
+  carts           Cart[]
+  wishlists       Wishlist[]
+  productReviews  ProductReview[]
+  storeReviews    StoreReview[]
+  storeFollowers  StoreFollower[]
+  notifications   Notification[]
+  couponUsages    CouponUsage[]
+  returnRequests  ReturnRequest[]
+  loyaltyAccount  LoyaltyAccount?
+  supportTickets  SupportTicket[]
+  liveStreams     LiveStream[]
+  streamViews     StreamView[]
+  streamChats     StreamChat[]
+  affiliate       Affiliate?
+  searchQueries   SearchQuery[]
+  recommendations ProductRecommendation[]
+  behaviors       UserBehavior[]
+  productShares   ProductShare[]
+  following       UserFollow[]            @relation("UserFollowing")
+  followers       UserFollow[]            @relation("UserFollowers")
+  subscriptions   Subscription[]
 
   @@unique([email])
   @@map("users")
@@ -130,6 +141,7 @@ model Category {
   children        Category[]      @relation("CategoryToSubcategories")
   storeCategories StoreCategory[]
   products        Product[]
+  behaviors       UserBehavior[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -504,14 +516,18 @@ model Store {
   updatedAt DateTime @updatedAt
 
   // Relations
-  products        Product[]
-  orders          Order[]
-  storeCategories StoreCategory[]
-  storeReviews    StoreReview[]
-  storeFollowers  StoreFollower[]
-  storeAnalytics  StoreAnalytics[]
-  storePromotions StorePromotion[]
-  storeDocuments  StoreDocument[]
+  products           Product[]
+  orders             Order[]
+  storeCategories    StoreCategory[]
+  storeReviews       StoreReview[]
+  storeFollowers     StoreFollower[]
+  storeAnalytics     StoreAnalytics[]
+  storePromotions    StorePromotion[]
+  storeDocuments     StoreDocument[]
+  liveStreams        LiveStream[]
+  affiliateLinks     AffiliateLink[]
+  inventoryLocations InventoryLocation[]
+  behaviors          UserBehavior[]
 
   @@index([ownerId])
   @@index([status])
@@ -667,13 +683,21 @@ model Product {
   updatedAt   DateTime  @updatedAt
 
   // Relations
-  images           ProductImage[]
-  variants         ProductVariant[]
-  reviews          ProductReview[]
-  orderItems       OrderItem[]
-  cartItems        CartItem[]
-  wishlists        Wishlist[]
-  productAnalytics ProductAnalytics[]
+  images                ProductImage[]
+  variants              ProductVariant[]
+  reviews               ProductReview[]
+  orderItems            OrderItem[]
+  cartItems             CartItem[]
+  wishlists             Wishlist[]
+  productAnalytics      ProductAnalytics[]
+  flashSaleItems        FlashSaleItem[]
+  affiliateLinks        AffiliateLink[]
+  inventoryItems        InventoryItem[]
+  stockMovements        StockMovement[]
+  sourceRecommendations ProductRecommendation[] @relation("SourceProduct")
+  targetRecommendations ProductRecommendation[] @relation("TargetProduct")
+  behaviors             UserBehavior[]
+  shares                ProductShare[]
 
   @@index([storeId])
   @@index([categoryId])
@@ -746,8 +770,10 @@ model ProductVariant {
   updatedAt DateTime @updatedAt
 
   // Relations
-  orderItems OrderItem[]
-  cartItems  CartItem[]
+  orderItems     OrderItem[]
+  cartItems      CartItem[]
+  inventoryItems InventoryItem[]
+  stockMovements StockMovement[]
 
   @@index([productId])
   @@index([isActive])
@@ -848,11 +874,13 @@ model Order {
   cancelledBy  String? // User ID who cancelled
 
   // Shipping
-  shipment       Shipment?
-  couponUsage    CouponUsage?
-  returnRequests ReturnRequest[]
-  pointsHistory  PointsHistory[]
-  supportTickets SupportTicket[]
+  shipment            Shipment?
+  couponUsage         CouponUsage?
+  returnRequests      ReturnRequest[]
+  pointsHistory       PointsHistory[]
+  supportTickets      SupportTicket[]
+  affiliateCommission AffiliateCommission?
+  stockMovements      StockMovement[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1796,4 +1824,660 @@ model TicketMessage {
   @@index([ticketId])
   @@index([createdAt])
   @@map("ticket_messages")
+}
+
+// Advanced E-commerce Features
+
+// Live Streaming & Video Commerce
+enum StreamStatus {
+  SCHEDULED
+  LIVE
+  ENDED
+  CANCELLED
+}
+
+model LiveStream {
+  id           String       @id @default(uuid())
+  title        String
+  description  String?      @db.Text
+  thumbnailUrl String?      @db.Text
+  streamUrl    String?      @db.Text
+  status       StreamStatus @default(SCHEDULED)
+
+  // Host information
+  hostId String
+  host   User   @relation(fields: [hostId], references: [id], onDelete: Cascade)
+
+  // Store relation
+  storeId String?
+  store   Store?  @relation(fields: [storeId], references: [id], onDelete: SetNull)
+
+  // Scheduling
+  scheduledAt DateTime
+  startedAt   DateTime?
+  endedAt     DateTime?
+
+  // Viewer stats
+  maxViewers Int @default(0)
+  totalViews Int @default(0)
+
+  // Products featured in stream
+  products String? @db.Text // JSON array of product IDs
+
+  // Settings
+  isRecorded Boolean @default(true)
+  recordUrl  String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  streamViews StreamView[]
+  streamChats StreamChat[]
+
+  @@index([hostId])
+  @@index([storeId])
+  @@index([status])
+  @@index([scheduledAt])
+  @@map("live_streams")
+}
+
+model StreamView {
+  id       String     @id @default(uuid())
+  streamId String
+  stream   LiveStream @relation(fields: [streamId], references: [id], onDelete: Cascade)
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  sessionId String? // For anonymous viewers
+  ipAddress String?
+  userAgent String? @db.Text
+
+  joinedAt DateTime  @default(now())
+  leftAt   DateTime?
+  duration Int? // in seconds
+
+  @@index([streamId])
+  @@index([userId])
+  @@index([sessionId])
+  @@map("stream_views")
+}
+
+model StreamChat {
+  id       String     @id @default(uuid())
+  streamId String
+  stream   LiveStream @relation(fields: [streamId], references: [id], onDelete: Cascade)
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  message  String  @db.Text
+  isHost   Boolean @default(false)
+  isPinned Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([streamId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("stream_chats")
+}
+
+// Flash Sales & Time-limited Deals
+enum FlashSaleStatus {
+  UPCOMING
+  ACTIVE
+  ENDED
+  CANCELLED
+}
+
+model FlashSale {
+  id          String          @id @default(uuid())
+  name        String
+  description String?         @db.Text
+  bannerImage String?         @db.Text
+  status      FlashSaleStatus @default(UPCOMING)
+
+  startTime DateTime
+  endTime   DateTime
+
+  // Rules
+  maxQuantityPerUser Int?   @default(1)
+  minOrderAmount     Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  flashSaleItems FlashSaleItem[]
+
+  @@index([status])
+  @@index([startTime, endTime])
+  @@map("flash_sales")
+}
+
+model FlashSaleItem {
+  id          String    @id @default(uuid())
+  flashSaleId String
+  flashSale   FlashSale @relation(fields: [flashSaleId], references: [id], onDelete: Cascade)
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  originalPrice   Float
+  salePrice       Float
+  discountPercent Int
+
+  totalQuantity     Int // Total items for flash sale
+  soldQuantity      Int @default(0)
+  remainingQuantity Int // Calculated field
+
+  maxPerUser Int @default(1)
+
+  // Priority for display order
+  priority Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([flashSaleId, productId])
+  @@index([flashSaleId])
+  @@index([productId])
+  @@map("flash_sale_items")
+}
+
+// Affiliate Marketing System
+enum AffiliateStatus {
+  PENDING
+  APPROVED
+  SUSPENDED
+  REJECTED
+}
+
+model Affiliate {
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  status AffiliateStatus @default(PENDING)
+
+  // Commission settings
+  defaultCommissionRate Float @default(5.0) // Percentage
+
+  // Payment info
+  bankAccount  String? @db.Text
+  taxCode      String?
+  paymentEmail String?
+
+  // Stats
+  totalReferrals   Int   @default(0)
+  totalCommission  Float @default(0)
+  unpaidCommission Float @default(0)
+
+  // Application info
+  applicationNote String?   @db.Text
+  rejectionReason String?   @db.Text
+  approvedAt      DateTime?
+  approvedBy      String? // Admin ID
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  affiliateLinks AffiliateLink[]
+  commissions    AffiliateCommission[]
+  payouts        AffiliatePayout[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("affiliates")
+}
+
+model AffiliateLink {
+  id          String    @id @default(uuid())
+  affiliateId String
+  affiliate   Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  storeId String?
+  store   Store?  @relation(fields: [storeId], references: [id], onDelete: SetNull)
+
+  code String @unique // Unique affiliate code
+
+  // Custom commission rate (overrides default)
+  commissionRate Float?
+
+  // Stats
+  clicks      Int   @default(0)
+  conversions Int   @default(0)
+  revenue     Float @default(0)
+
+  isActive Boolean @default(true)
+
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  AffiliateCommission AffiliateCommission[]
+
+  @@index([affiliateId])
+  @@index([productId])
+  @@index([storeId])
+  @@index([code])
+  @@map("affiliate_links")
+}
+
+model AffiliateCommission {
+  id          String    @id @default(uuid())
+  affiliateId String
+  affiliate   Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+
+  orderId String @unique
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  linkId String?
+  link   AffiliateLink? @relation(fields: [linkId], references: [id], onDelete: SetNull)
+
+  orderAmount      Float
+  commissionRate   Float
+  commissionAmount Float
+
+  status String    @default("pending") // pending, approved, paid
+  paidAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([affiliateId])
+  @@index([orderId])
+  @@index([status])
+  @@index([linkId])
+  @@map("affiliate_commissions")
+}
+
+model AffiliatePayout {
+  id          String    @id @default(uuid())
+  affiliateId String
+  affiliate   Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+
+  amount    Float
+  method    String // bank_transfer, paypal, etc.
+  reference String? // Transaction reference
+  note      String? @db.Text
+
+  status      String    @default("pending") // pending, processing, completed, failed
+  processedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([affiliateId])
+  @@index([status])
+  @@map("affiliate_payouts")
+}
+
+// Advanced Inventory Management
+model InventoryLocation {
+  id      String @id @default(uuid())
+  name    String // "Kho Hà Nội", "Kho HCM"
+  code    String @unique
+  address String @db.Text
+  lat     Float?
+  lng     Float?
+
+  storeId String?
+  store   Store?  @relation(fields: [storeId], references: [id], onDelete: SetNull)
+
+  isActive  Boolean @default(true)
+  isDefault Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  inventoryItems InventoryItem[]
+  stockMovements StockMovement[] @relation("LocationStockMovements")
+  transfersTo    StockMovement[] @relation("StockTransfer")
+  StockMovement  StockMovement[]
+
+  @@index([storeId])
+  @@index([isActive])
+  @@map("inventory_locations")
+}
+
+model InventoryItem {
+  id         String            @id @default(uuid())
+  locationId String
+  location   InventoryLocation @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  variantId String?
+  variant   ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+
+  quantity     Int @default(0)
+  reservedQty  Int @default(0) // Reserved for pending orders
+  availableQty Int @default(0) // quantity - reservedQty
+
+  // Thresholds
+  minStockLevel Int  @default(0)
+  maxStockLevel Int?
+  reorderPoint  Int  @default(5)
+
+  // Cost tracking
+  avgCostPrice  Float?
+  lastCostPrice Float?
+
+  updatedAt DateTime @updatedAt
+
+  @@unique([locationId, productId, variantId])
+  @@index([locationId])
+  @@index([productId])
+  @@index([variantId])
+  @@map("inventory_items")
+}
+
+enum StockMovementType {
+  IN // Stock received
+  OUT // Stock sold
+  TRANSFER // Between locations
+  ADJUSTMENT // Manual adjustment
+  RETURN // Customer return
+  DAMAGED // Damaged goods
+  EXPIRED // Expired products
+}
+
+model StockMovement {
+  id         String            @id @default(uuid())
+  locationId String
+  location   InventoryLocation @relation("LocationStockMovements", fields: [locationId], references: [id], onDelete: Cascade)
+
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  variantId String?
+  variant   ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+
+  type     StockMovementType
+  quantity Int // Positive for IN, negative for OUT
+
+  // Related entities
+  orderId String?
+  order   Order?  @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  transferToLocationId String?
+  transferToLocation   InventoryLocation? @relation("StockTransfer", fields: [transferToLocationId], references: [id], onDelete: SetNull)
+
+  // Cost information
+  unitCost  Float?
+  totalCost Float?
+
+  reason          String? @db.Text
+  referenceNumber String? // PO number, invoice number, etc.
+
+  createdBy           String? // User ID
+  createdAt           DateTime           @default(now())
+  InventoryLocation   InventoryLocation? @relation(fields: [inventoryLocationId], references: [id])
+  inventoryLocationId String?
+
+  @@index([locationId])
+  @@index([productId])
+  @@index([variantId])
+  @@index([type])
+  @@index([createdAt])
+  @@index([inventoryLocationId])
+  @@index([transferToLocationId])
+  @@index([orderId])
+  @@map("stock_movements")
+}
+
+// Multi-language Support
+model Translation {
+  id           String @id @default(uuid())
+  entityType   String // "product", "category", "store", etc.
+  entityId     String
+  fieldName    String // "name", "description", etc.
+  languageCode String // "vi", "en", "zh", etc.
+  value        String @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([entityType, entityId, fieldName, languageCode])
+  @@index([entityType, entityId])
+  @@index([languageCode])
+  @@map("translations")
+}
+
+// SEO & Content Management
+model SEOTemplate {
+  id       String @id @default(uuid())
+  pageType String // "product", "category", "store", "homepage"
+  template String @db.Text // Template with variables like {product_name}
+
+  titleTemplate       String? @db.Text
+  descriptionTemplate String? @db.Text
+  keywordsTemplate    String? @db.Text
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([pageType])
+  @@map("seo_templates")
+}
+
+// Advanced Search & Filters
+model SearchQuery {
+  id     String  @id @default(uuid())
+  query  String
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  sessionId String? // For anonymous users
+  ipAddress String?
+
+  // Results
+  resultCount      Int     @default(0)
+  clickedProductId String?
+
+  // Filters applied
+  filters String? @db.Text // JSON
+
+  createdAt DateTime @default(now())
+
+  @@index([query])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("search_queries")
+}
+
+model PopularSearch {
+  id          String @id @default(uuid())
+  query       String @unique
+  searchCount Int    @default(1)
+  resultCount Int    @default(0)
+
+  lastSearched DateTime @default(now())
+
+  @@index([searchCount])
+  @@index([lastSearched])
+  @@map("popular_searches")
+}
+
+// Product Recommendations
+enum RecommendationType {
+  VIEWED_TOGETHER // "Khách hàng cũng xem"
+  BOUGHT_TOGETHER // "Mua cùng nhau"
+  SIMILAR_PRODUCTS // "Sản phẩm tương tự"
+  PERSONALIZED // "Đề xuất cho bạn"
+  TRENDING // "Xu hướng"
+  RECENTLY_VIEWED // "Đã xem gần đây"
+}
+
+model ProductRecommendation {
+  id   String             @id @default(uuid())
+  type RecommendationType
+
+  sourceProductId String?
+  sourceProduct   Product? @relation("SourceProduct", fields: [sourceProductId], references: [id], onDelete: Cascade)
+
+  targetProductId String
+  targetProduct   Product @relation("TargetProduct", fields: [targetProductId], references: [id], onDelete: Cascade)
+
+  score Float @default(0) // Recommendation strength
+
+  // For personalized recommendations
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([type, sourceProductId, targetProductId, userId])
+  @@index([type])
+  @@index([sourceProductId])
+  @@index([targetProductId])
+  @@index([userId])
+  @@index([score])
+  @@map("product_recommendations")
+}
+
+// Advanced Analytics
+model UserBehavior {
+  id     String  @id @default(uuid())
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  sessionId String? // For anonymous users
+  action    String // view_product, add_to_cart, purchase, etc.
+
+  // Context
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  storeId String?
+  store   Store?  @relation(fields: [storeId], references: [id], onDelete: SetNull)
+
+  // Additional data
+  data String? @db.Text // JSON
+
+  // Device info
+  deviceType String? // mobile, tablet, desktop
+  browser    String?
+  os         String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([sessionId])
+  @@index([action])
+  @@index([productId])
+  @@index([createdAt])
+  @@index([categoryId])
+  @@index([storeId])
+  @@map("user_behaviors")
+}
+
+// Social Features
+model ProductShare {
+  id        String  @id @default(uuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  platform String // facebook, twitter, telegram, etc.
+  sharedAt DateTime @default(now())
+
+  @@index([productId])
+  @@index([userId])
+  @@index([platform])
+  @@map("product_shares")
+}
+
+model UserFollow {
+  id         String @id @default(uuid())
+  followerId String
+  follower   User   @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
+
+  followingId String
+  following   User   @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+  @@map("user_follows")
+}
+
+// Subscription & Premium Features
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  EXPIRED
+  SUSPENDED
+}
+
+model Subscription {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  planId String
+  plan   SubscriptionPlan @relation(fields: [planId], references: [id])
+
+  status SubscriptionStatus @default(ACTIVE)
+
+  startDate DateTime
+  endDate   DateTime
+
+  // Payment
+  amount   Float
+  currency String @default("VND")
+
+  // Auto-renewal
+  autoRenew Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([planId])
+  @@index([status])
+  @@index([endDate])
+  @@map("subscriptions")
+}
+
+model SubscriptionPlan {
+  id          String  @id @default(uuid())
+  name        String
+  description String? @db.Text
+
+  price    Float
+  currency String @default("VND")
+
+  // Duration
+  durationDays Int // 30 for monthly, 365 for yearly
+
+  // Features (JSON)
+  features String @db.Text
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  subscriptions Subscription[]
+
+  @@index([isActive])
+  @@map("subscription_plans")
 }

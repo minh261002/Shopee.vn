@@ -12,6 +12,8 @@ import {
   PromotionStatus,
 } from "@prisma/client";
 
+import type { PaginationMeta, AddressData, UserBasic } from "./common";
+
 // Store Types
 export interface Store {
   id: string;
@@ -76,12 +78,7 @@ export interface Store {
 }
 
 export interface StoreWithOwner extends Store {
-  owner: {
-    id: string;
-    name: string;
-    email: string;
-    image?: string;
-  };
+  owner: UserBasic;
 }
 
 export interface StoreWithStats extends Store {
@@ -225,7 +222,6 @@ export interface ProductVariant {
   updatedAt: Date;
 }
 
-// Brand Types
 export interface Brand {
   id: string;
   name: string;
@@ -306,11 +302,7 @@ export interface Order {
 }
 
 export interface OrderWithRelations extends Order {
-  user?: {
-    id: string;
-    name: string;
-    email: string;
-  };
+  user?: UserBasic;
   store: {
     id: string;
     name: string;
@@ -426,11 +418,7 @@ export interface ProductReview {
 }
 
 export interface ProductReviewWithUser extends ProductReview {
-  user: {
-    id: string;
-    name: string;
-    image?: string;
-  };
+  user: UserBasic;
 }
 
 export interface StoreReview {
@@ -450,11 +438,7 @@ export interface StoreReview {
 }
 
 export interface StoreReviewWithUser extends StoreReview {
-  user: {
-    id: string;
-    name: string;
-    image?: string;
-  };
+  user: UserBasic;
 }
 
 // Promotion Types
@@ -597,32 +581,17 @@ export interface OrderFilters {
 // Response Types
 export interface StoresResponse {
   stores: StoreWithStats[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
+  pagination: PaginationMeta;
 }
 
 export interface ProductsResponse {
   products: ProductWithRelations[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
+  pagination: PaginationMeta;
 }
 
 export interface OrdersResponse {
   orders: OrderWithRelations[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
+  pagination: PaginationMeta;
 }
 
 // Shipping Types
@@ -824,7 +793,7 @@ export interface CouponUsage {
   createdAt: Date;
 }
 
-// Return/Refund Types
+// Return Types
 export interface ReturnRequest {
   id: string;
   orderId: string;
@@ -927,7 +896,7 @@ export interface PointsHistory {
   createdAt: Date;
 }
 
-// FAQ Types
+// Support Types
 export interface FAQ {
   id: string;
   category:
@@ -951,7 +920,6 @@ export interface FAQ {
   updatedAt: Date;
 }
 
-// Support Ticket Types
 export interface SupportTicket {
   id: string;
   ticketNumber: string;
@@ -981,71 +949,34 @@ export interface TicketMessage {
   createdAt: Date;
 }
 
-// Extended Response Types
+// Additional Response Types
 export interface ShipmentsResponse {
   shipments: Shipment[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
+  pagination: PaginationMeta;
 }
 
 export interface NotificationsResponse {
   notifications: Notification[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
+  pagination: PaginationMeta;
 }
 
 export interface CouponsResponse {
   coupons: Coupon[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
+  pagination: PaginationMeta;
 }
 
 export interface ReturnRequestsResponse {
   returnRequests: ReturnRequest[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
+  pagination: PaginationMeta;
 }
 
 export interface SupportTicketsResponse {
   tickets: SupportTicket[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
+  pagination: PaginationMeta;
 }
 
-// Form Data for Address with Google Maps
-export interface AddressFormData {
-  address: string;
-  ward?: string;
-  district?: string;
-  city?: string;
-  country?: string;
-  lat?: number; // Google Maps latitude
-  lng?: number; // Google Maps longitude
-  phone?: string;
-  contactName?: string;
-}
-
-export interface ShippingAddressFormData extends AddressFormData {
+// Additional Form Data Types
+export interface ShippingAddressFormData extends AddressData {
   isDefault?: boolean;
   type?: "HOME" | "WORK" | "OTHER";
 }
@@ -1053,8 +984,8 @@ export interface ShippingAddressFormData extends AddressFormData {
 export interface ShipmentFormData {
   providerId: string;
   method: "STANDARD" | "EXPRESS" | "SAME_DAY" | "PICKUP" | "DRONE_DELIVERY";
-  pickupAddress: AddressFormData;
-  deliveryAddress: AddressFormData;
+  pickupAddress: AddressData;
+  deliveryAddress: AddressData;
   weight?: number;
   length?: number;
   width?: number;
