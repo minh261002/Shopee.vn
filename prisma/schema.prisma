@@ -185,6 +185,12 @@ enum GeographicTarget {
   SPECIFIC_CITY
 }
 
+enum CampaignType {
+  FLASH_SALE
+  SEASONAL
+  BRAND
+}
+
 model ContentBlock {
   id          String          @id @default(uuid())
   title       String
@@ -321,8 +327,8 @@ model Campaign {
   conditions       String?          @db.Text // JSON string for display conditions
 
   // Shopee specific
-  campaignType String? // FLASH_SALE, SEASONAL, BRAND, etc.
-  isFeatured   Boolean @default(false)
+  campaignType CampaignType?
+  isFeatured   Boolean       @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
