@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { redirect, useRouter } from 'next/navigation';
+import React, { useState } from 'react';
+import { redirect } from 'next/navigation';
 import {
   Store,
   Phone,
@@ -33,7 +33,6 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { motion } from 'framer-motion';
 import api from '@/lib/axios';
 import { authClient } from '@/lib/auth-client';
-import type { DefaultSession } from 'better-auth';
 
 interface FormData {
   // Basic info
@@ -80,22 +79,18 @@ interface AddressData {
 }
 
 const SetupStore = () => {
-
-  const router = useRouter();
-
   const { data: session } = authClient.useSession();
-  const role = (session?.user as DefaultSession['user'])?.role;
 
-  useEffect(() => {
-    if (role && role !== 'USER') {
-      return redirect('/seller-register');
-    }
-  }, [role, router]);
+  // Kiểm tra đăng nhập
+  if (!session) {
+    redirect('/login');
+  }
 
+  // Middleware đã xử lý phân quyền, không cần kiểm tra role ở đây nữa
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showLoadingModal, setShowLoadingModal] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
+  const [showLoadingModal, setShowLoadingModal] = useState(false);
 
   const [formData, setFormData] = useState<FormData>({
     name: '',
@@ -214,7 +209,7 @@ const SetupStore = () => {
       await new Promise(resolve => setTimeout(resolve, 10000));
 
       toast.success('Đăng ký cửa hàng thành công! Đang chờ phê duyệt.');
-      router.push('/seller/dashboard');
+      redirect('/seller/dashboard');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Có lỗi xảy ra');
       setShowLoadingModal(false);

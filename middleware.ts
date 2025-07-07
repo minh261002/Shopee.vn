@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const protectedRoutes = ["/admin", "/seller"];
+const protectedRoutes = ["/admin", "/seller", "/seller-register"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -29,11 +29,35 @@ export async function middleware(request: NextRequest) {
 
     const role = session.user.role;
 
-    if (pathname.startsWith("/admin") && role !== "ADMIN") {
+    // Admin có thể truy cập mọi route
+    if (role === "ADMIN") {
+      return NextResponse.next();
+    }
+
+    // Logic phân quyền cho từng route
+    if (pathname.startsWith("/admin")) {
       return NextResponse.redirect(new URL("/unauthorized", request.url));
     }
 
-    if (pathname.startsWith("/seller") && role !== "SELLER") {
+    if (pathname.startsWith("/seller")) {
+      // Nếu là SELLER thì cho phép vào /seller/*
+      if (role === "SELLER") {
+        return NextResponse.next();
+      }
+      // Nếu không phải SELLER thì chuyển về trang đăng ký
+      return NextResponse.redirect(new URL("/seller-register", request.url));
+    }
+
+    if (pathname.startsWith("/seller-register")) {
+      // Chỉ USER mới được vào trang đăng ký seller
+      if (role === "USER") {
+        return NextResponse.next();
+      }
+      // SELLER đã có shop thì về trang seller
+      if (role === "SELLER") {
+        return NextResponse.redirect(new URL("/seller", request.url));
+      }
+      // Còn lại thì về unauthorized
       return NextResponse.redirect(new URL("/unauthorized", request.url));
     }
 
@@ -45,5 +69,10 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/seller/:path*"],
+  matcher: [
+    "/admin/:path*",
+    "/seller/:path*",
+    "/seller-register/:path*",
+    "/seller-register",
+  ],
 };

@@ -9,8 +9,10 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarImage } from "@radix-ui/react-avatar"
 import { AvatarFallback } from "@radix-ui/react-avatar"
-import { LogOutIcon, UserIcon } from "lucide-react"
+import { Link, LogOutIcon, SettingsIcon, StoreIcon, UserIcon } from "lucide-react"
 import { useSignOut } from "@/hooks/use-signout"
+import { authClient } from "@/lib/auth-client"
+import type { DefaultSession } from "better-auth"
 
 interface UserInfoProps {
     name: string
@@ -20,6 +22,8 @@ interface UserInfoProps {
 
 const UserInfo = ({ name, email, image }: UserInfoProps) => {
     const { handleSignOut } = useSignOut()
+    const { data: session } = authClient.useSession();
+    const role = (session?.user as DefaultSession['user'])?.role;
 
     return (
         <DropdownMenu>
@@ -43,6 +47,22 @@ const UserInfo = ({ name, email, image }: UserInfoProps) => {
                     </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                {role === 'SELLER' && (
+                    <DropdownMenuItem className="cursor-pointer">
+                        <Link href="/seller/dashboard">
+                            <StoreIcon className="w-4 h-4" />
+                            Quản lý cửa hàng
+                        </Link>
+                    </DropdownMenuItem>
+                )}
+                {role === 'ADMIN' && (
+                    <DropdownMenuItem className="cursor-pointer">
+                        <Link href="/admin/dashboard">
+                            <SettingsIcon className="w-4 h-4" />
+                            Quản trị hệ thống
+                        </Link>
+                    </DropdownMenuItem>
+                )}
                 <DropdownMenuItem className="cursor-pointer" onClick={handleSignOut}>
                     <LogOutIcon className="w-4 h-4" />
                     Đăng xuất

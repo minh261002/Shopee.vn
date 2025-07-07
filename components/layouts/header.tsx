@@ -5,6 +5,7 @@ import { Bell, HelpCircle, ShoppingCart, StoreIcon, UserIcon } from "lucide-reac
 import MaxWidthWrapper from "./MaxWidthWrapper";
 import { authClient } from "@/lib/auth-client";
 import UserInfo from "./user-info";
+import type { DefaultSession } from "better-auth";
 
 
 const categories = [
@@ -13,8 +14,7 @@ const categories = [
 ];
 const Header = () => {
     const { data: session } = authClient.useSession();
-
-    console.log(session?.user?.name);
+    const role = (session?.user as DefaultSession['user'])?.role;
 
     return (
         <header className="w-full" style={{
@@ -26,10 +26,18 @@ const Header = () => {
 
                 <div className="flex justify-between items-center text-white text-sm py-2 pb-4">
                     <div className="flex gap-3 items-center">
-                        <Link href="/seller-register" className="hover:underline flex items-center gap-2">
-                            <StoreIcon className="w-4 h-4" />
-                            Đăng ký cửa hàng trên Shopee
-                        </Link>
+                        {!role || role === 'USER' ? (
+                            <Link href="/seller-register" className="hover:underline flex items-center gap-2">
+                                <StoreIcon className="w-4 h-4" />
+                                Đăng ký cửa hàng trên Shopee
+                            </Link>
+                        ) : (
+                            <Link href="/seller/dashboard" className="hover:underline flex items-center gap-2">
+                                <StoreIcon className="w-4 h-4" />
+                                Quản lý cửa hàng
+                            </Link>
+                        )}
+
                     </div>
                     <div className="flex gap-4 items-center">
                         <Link href="#" className="flex items-center gap-1 hover:underline">

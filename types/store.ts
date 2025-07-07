@@ -15,6 +15,49 @@ import {
 import type { PaginationMeta, AddressData, UserBasic } from "./common";
 
 // Store Types
+export interface StoreData {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  status: "PENDING_APPROVAL" | "ACTIVE" | "SUSPENDED" | "CLOSED" | "BANNED";
+  type: "INDIVIDUAL" | "BUSINESS" | "CORPORATION" | "OFFICIAL";
+  verificationStatus: "PENDING" | "VERIFIED" | "REJECTED" | "EXPIRED";
+  logo?: string;
+  banner?: string;
+  email?: string;
+  phone?: string;
+  website?: string;
+  businessName?: string;
+  businessAddress?: string;
+  taxCode?: string;
+  businessLicense?: string;
+  address: string;
+  ward?: string;
+  city?: string;
+  country: string;
+  lat?: number;
+  lng?: number;
+  totalProducts: number;
+  totalOrders: number;
+  totalRevenue: number;
+  rating: number;
+  reviewCount: number;
+  followerCount: number;
+  returnPolicy?: string;
+  shippingPolicy?: string;
+  warrantyPolicy?: string;
+  isActive: boolean;
+  isFeatured: boolean;
+  isVerified: boolean;
+  isOfficialStore: boolean;
+  facebookUrl?: string;
+  instagramUrl?: string;
+  youtubeUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Store {
   id: string;
   name: string;

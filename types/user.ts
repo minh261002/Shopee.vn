@@ -1,3 +1,5 @@
+import type { StoreData } from "./store";
+
 export interface UserData {
   id: string;
   name: string;
@@ -12,6 +14,7 @@ export interface UserData {
     accounts: number;
     addresses: number;
   };
+  stores: StoreData[];
 }
 
 export interface UserAddress {

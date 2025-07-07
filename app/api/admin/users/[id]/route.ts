@@ -6,36 +6,70 @@ import { Role } from "@prisma/client";
 
 // GET - Lấy thông tin user theo ID
 export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  req: NextRequest,
+  { params }: { params: { id: string } }
 ) {
   try {
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    });
+    // Get session
+    const sessionResponse = await fetch(
+      `${req.nextUrl.origin}/api/auth/session`,
+      {
+        headers: {
+          cookie: req.headers.get("cookie") || "",
+        },
+      }
+    );
+
+    if (!sessionResponse.ok) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const session = await sessionResponse.json();
 
     if (!session?.user || session.user.role !== "ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = await params;
-
+    // Get user with store info
     const user = await prisma.user.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        emailVerified: true,
-        image: true,
-        role: true,
-        createdAt: true,
-        updatedAt: true,
-        _count: {
+      where: {
+        id: params.id,
+      },
+      include: {
+        stores: {
           select: {
-            sessions: true,
-            accounts: true,
-            addresses: true,
+            id: true,
+            name: true,
+            slug: true,
+            description: true,
+            status: true,
+            type: true,
+            verificationStatus: true,
+            logo: true,
+            banner: true,
+            email: true,
+            phone: true,
+            website: true,
+            businessName: true,
+            businessAddress: true,
+            taxCode: true,
+            businessLicense: true,
+            address: true,
+            ward: true,
+            city: true,
+            country: true,
+            lat: true,
+            lng: true,
+            totalProducts: true,
+            totalOrders: true,
+            totalRevenue: true,
+            rating: true,
+            reviewCount: true,
+            followerCount: true,
+            returnPolicy: true,
+            shippingPolicy: true,
+            createdAt: true,
+            updatedAt: true,
           },
         },
       },
@@ -47,7 +81,7 @@ export async function GET(
 
     return NextResponse.json(user);
   } catch (error) {
-    console.error("Error fetching user:", error);
+    console.error("Get user error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
