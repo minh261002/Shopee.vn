@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect } from 'react';
+import { redirect, useRouter } from 'next/navigation';
 import {
   Store,
   Phone,
@@ -32,6 +32,8 @@ import AddressPicker from '@/components/ui/address-picker';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { motion } from 'framer-motion';
 import api from '@/lib/axios';
+import { authClient } from '@/lib/auth-client';
+import type { DefaultSession } from 'better-auth';
 
 interface FormData {
   // Basic info
@@ -78,7 +80,18 @@ interface AddressData {
 }
 
 const SetupStore = () => {
+
   const router = useRouter();
+
+  const { data: session } = authClient.useSession();
+  const role = (session?.user as DefaultSession['user'])?.role;
+
+  useEffect(() => {
+    if (role && role !== 'USER') {
+      return redirect('/seller-register');
+    }
+  }, [role, router]);
+
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showLoadingModal, setShowLoadingModal] = useState(false);
