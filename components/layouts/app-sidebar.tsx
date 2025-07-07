@@ -7,6 +7,13 @@ import {
   Users,
   Target,
   Store,
+  Package,
+  ShoppingCart,
+  Warehouse,
+  Percent,
+  BarChart3,
+  Settings,
+  Star,
 } from "lucide-react"
 
 import { NavMain } from "@/components/layouts/nav-main"
@@ -110,6 +117,61 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         title: "Bảng điều khiển",
         url: "/seller/dashboard",
         icon: SquareTerminal,
+      },
+      {
+        title: "Sản phẩm",
+        url: "/seller/products",
+        icon: Package,
+        items: [
+          {
+            title: "Danh sách",
+            url: "/seller/products",
+          },
+          {
+            title: "Thêm mới",
+            url: "/seller/products/new",
+          },
+        ]
+      },
+      {
+        title: "Đơn hàng",
+        url: "/seller/orders",
+        icon: ShoppingCart,
+      },
+      {
+        title: "Kho hàng",
+        url: "/seller/inventory",
+        icon: Warehouse,
+      },
+      {
+        title: "Khuyến mãi",
+        url: "/seller/promotions",
+        icon: Percent,
+        items: [
+          {
+            title: "Danh sách",
+            url: "/seller/promotions",
+          },
+          {
+            title: "Tạo khuyến mãi",
+            url: "/seller/promotions/new",
+          },
+        ]
+      },
+      {
+        title: "Thống kê",
+        url: "/seller/analytics",
+        icon: BarChart3,
+      },
+      {
+        title: "Đánh giá",
+        url: "/seller/reviews",
+        icon: Star,
+      },
+      {
+        title: "Cài đặt",
+        url: "/seller/settings",
+        icon: Settings,
       },
     ],
   }
