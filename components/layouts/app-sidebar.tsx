@@ -6,6 +6,7 @@ import {
   SquareTerminal,
   Users,
   Target,
+  Store,
 } from "lucide-react"
 
 import { NavMain } from "@/components/layouts/nav-main"
@@ -37,6 +38,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         url: "/admin/dashboard",
         icon: SquareTerminal,
         isActive: true,
+      },
+      {
+        title: "Cửa hàng",
+        url: "/admin/stores",
+        icon: Store,
       },
       {
         title: "Danh mục ",
