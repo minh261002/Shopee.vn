@@ -71,9 +71,11 @@ const appLinks = [
     { icon: "/images/appgallery.png", label: "App Gallery", href: "#" },
 ];
 
-export default function Footer() {
+export default function Footer(
+    { className }: { className?: string }
+) {
     return (
-        <footer className="bg-[#f5f5f5] border-t mt-10 text-sm text-gray-700">
+        <footer className={`bg-[#f5f5f5] border-t text-sm text-gray-700 ${className}`}>
             <MaxWidthWrapper>
                 <div className=" px-4 py-10 grid grid-cols-1 md:grid-cols-5 gap-8">
                     {/* Cột 1 & 2: Dịch vụ khách hàng & Shopee VN */}

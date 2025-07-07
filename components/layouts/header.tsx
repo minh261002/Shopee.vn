@@ -26,7 +26,7 @@ const Header = () => {
 
                 <div className="flex justify-between items-center text-white text-sm py-2 pb-4">
                     <div className="flex gap-3 items-center">
-                        <Link href="/register" className="hover:underline flex items-center gap-2">
+                        <Link href="/seller-register" className="hover:underline flex items-center gap-2">
                             <StoreIcon className="w-4 h-4" />
                             Đăng ký cửa hàng trên Shopee
                         </Link>
