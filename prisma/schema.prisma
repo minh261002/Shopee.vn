@@ -480,13 +480,12 @@ model Store {
   businessAddress String? @db.Text
 
   // Location
-  address   String  @db.Text
-  ward      String? // Phường/Xã
-  district  String? // Quận/Huyện
-  city      String? // Tỉnh/Thành phố
-  country   String  @default("Vietnam")
-  latitude  Float?
-  longitude Float?
+  address String  @db.Text
+  ward    String? // Phường/Xã
+  city    String? // Tỉnh/Thành phố
+  country String  @default("Vietnam")
+  lat     Float?
+  lng     Float?
 
   // Statistics
   totalProducts Int   @default(0)
