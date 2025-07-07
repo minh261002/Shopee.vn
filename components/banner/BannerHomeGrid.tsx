@@ -8,28 +8,72 @@ import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 import { Skeleton } from "@/components/ui/skeleton";
 import MaxWidthWrapper from '../layouts/MaxWidthWrapper';
+import { useState, useEffect } from 'react';
+import api from '@/lib/axios';
+import { ContentBlock, ContentItem } from '@/types/banner';
 
-interface BannerHomeGridProps {
-    banners: {
-        id: string;
-        items: { image: string; title?: string; linkUrl?: string }[];
-    }[];
+// Device detection utility
+function getDeviceType() {
+    if (typeof window === 'undefined') return 'desktop';
+
+    const width = window.innerWidth;
+    if (width < 768) return 'mobile';
+    if (width < 1024) return 'tablet';
+    return 'desktop';
 }
+export function BannerHomeGrid() {
+    const [banners, setBanners] = useState<ContentBlock[]>([]);
+    const [device, setDevice] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
 
-export function BannerHomeGrid({ banners }: BannerHomeGridProps) {
+    useEffect(() => {
+        // Detect device on client side
+        setDevice(getDeviceType());
+
+        // Listen for window resize
+        const handleResize = () => {
+            setDevice(getDeviceType());
+        };
+
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    useEffect(() => {
+        async function fetchBanners() {
+            try {
+                const params = new URLSearchParams({
+                    position: 'HOMEPAGE_HERO',
+                    status: 'PUBLISHED',
+                    isActive: 'true',
+                    device: device,
+                    limit: '10'
+                });
+
+                const res = await api.get(`/banners?${params.toString()}`);
+                setBanners(res.data.banners || []);
+            } catch {
+                setBanners([]);
+            }
+        }
+
+        fetchBanners();
+    }, [device]);
+
     const banner = banners[0];
 
     if (!banner || !banner.items || banner.items.length === 0) {
         return (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 h-[240px]">
-                <div className="md:col-span-2">
-                    <Skeleton className="w-full h-full rounded-lg" />
+            <MaxWidthWrapper>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2 h-[240px]">
+                    <div className="md:col-span-2">
+                        <Skeleton className="w-full h-full rounded-lg" />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                        <Skeleton className="w-full h-[118px] rounded-lg" />
+                        <Skeleton className="w-full h-[118px] rounded-lg" />
+                    </div>
                 </div>
-                <div className="flex flex-col gap-2">
-                    <Skeleton className="w-full h-[118px] rounded-lg" />
-                    <Skeleton className="w-full h-[118px] rounded-lg" />
-                </div>
-            </div>
+            </MaxWidthWrapper>
         );
     }
 
@@ -109,14 +153,14 @@ export function BannerHomeGrid({ banners }: BannerHomeGridProps) {
                                 loop={sliderItems.length > 1}
                                 navigation={sliderItems.length > 1}
                                 pagination={{ clickable: true }}
-                                autoplay={sliderItems.length > 1 ? { delay: 4000, disableOnInteraction: false } : false}
+                                autoplay={sliderItems.length > 1 ? { delay: 4000 } : false}
                                 observer={true}
                                 observeParents={true}
                                 watchSlidesProgress={true}
                                 className="!h-full !w-full rounded-lg banner-swiper"
                                 style={{ height: '240px' }}
                             >
-                                {sliderItems.map((item, index) => (
+                                {sliderItems.map((item: ContentItem, index: number) => (
                                     <SwiperSlide key={index} className="!h-full">
                                         <a href={item.linkUrl || '#'} target="_blank" rel="noopener noreferrer" className="block h-full">
                                             <Image
@@ -135,7 +179,7 @@ export function BannerHomeGrid({ banners }: BannerHomeGridProps) {
                     </div>
 
                     <div className="flex flex-col gap-1 h-full">
-                        {rightItems.map((item, index) => (
+                        {rightItems.map((item: ContentItem, index: number) => (
                             <div key={index} className="flex-1">
                                 <a
                                     href={item.linkUrl || '#'}
