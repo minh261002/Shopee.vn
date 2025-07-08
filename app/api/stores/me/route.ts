@@ -23,8 +23,8 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get store
-    const store = await prisma.store.findFirst({
+    // Get stores
+    const stores = await prisma.store.findMany({
       where: {
         ownerId: session.user.id,
       },
@@ -67,13 +67,12 @@ export async function GET(req: NextRequest) {
         createdAt: true,
         updatedAt: true,
       },
+      orderBy: {
+        createdAt: "desc",
+      },
     });
 
-    if (!store) {
-      return NextResponse.json({ error: "Store not found" }, { status: 404 });
-    }
-
-    return NextResponse.json(store);
+    return NextResponse.json({ stores });
   } catch (error) {
     console.error("Get store error:", error);
     return NextResponse.json(

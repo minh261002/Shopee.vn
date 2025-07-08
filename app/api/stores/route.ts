@@ -28,20 +28,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check if user already has a store
-    const existingStore = await prisma.store.findFirst({
-      where: {
-        ownerId: session.user.id,
-      },
-    });
-
-    if (existingStore) {
-      return NextResponse.json(
-        { error: "You already have a store" },
-        { status: 400 }
-      );
-    }
-
     const body = await req.json();
 
     // Validate required fields

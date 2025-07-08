@@ -31,6 +31,7 @@ import {
 import { NavMain } from "@/components/layouts/nav-main"
 import { NavUser } from "@/components/layouts/nav-user"
 import { authClient } from "@/lib/auth-client"
+import { StoreSwitcher } from "@/components/layouts/store-switcher"
 
 import {
   Sidebar,
@@ -435,6 +436,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader className="items-center">
         <Image src="/images/logo-color.png" alt="logo" width={150} height={100} />
+        {!isAdmin && <StoreSwitcher />}
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={

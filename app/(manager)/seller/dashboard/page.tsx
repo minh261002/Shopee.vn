@@ -1,35 +1,16 @@
 "use client"
 
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Store, Phone, Globe, MapPin, Building2, FileText, BarChart3, Star, Users, ShoppingBag, DollarSign, ImageIcon, Calendar } from 'lucide-react'
 import Image from 'next/image'
-import { api } from '@/lib/axios'
 import { format } from 'date-fns'
 import { vi } from 'date-fns/locale'
-
-import type { StoreData } from '@/types/store'
+import { useStore } from '@/providers/store-context'
 
 const SellerDashboard = () => {
-    const [store, setStore] = useState<StoreData | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-        const fetchStore = async () => {
-            try {
-                const response = await api.get('/stores/me');
-                setStore(response.data);
-            } catch (err) {
-                setError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        fetchStore();
-    }, []);
+    const { currentStore, isLoading } = useStore()
 
     if (isLoading) {
         return (
@@ -41,12 +22,12 @@ const SellerDashboard = () => {
         );
     }
 
-    if (error) {
-        return <div className="text-red-500">{error}</div>;
-    }
-
-    if (!store) {
-        return <div>Không tìm thấy thông tin cửa hàng</div>;
+    if (!currentStore) {
+        return (
+            <div className="text-center py-8">
+                <p className="text-muted-foreground">Vui lòng chọn cửa hàng để xem thông tin</p>
+            </div>
+        );
     }
 
     return (
@@ -64,36 +45,36 @@ const SellerDashboard = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <p className="text-sm font-medium">Tên cửa hàng</p>
-                            <p className="text-lg">{store.name}</p>
+                            <p className="text-lg">{currentStore.name}</p>
                         </div>
                         <div>
                             <p className="text-sm font-medium">Loại hình</p>
-                            <Badge>{store.type}</Badge>
+                            <Badge>{currentStore.type}</Badge>
                         </div>
                         <div>
                             <p className="text-sm font-medium">Trạng thái</p>
                             <Badge
                                 variant={
-                                    store.status === 'ACTIVE' ? 'default' :
-                                        store.status === 'PENDING_APPROVAL' ? 'secondary' :
-                                            store.status === 'SUSPENDED' ? 'destructive' :
+                                    currentStore.status === 'ACTIVE' ? 'default' :
+                                        currentStore.status === 'PENDING_APPROVAL' ? 'secondary' :
+                                            currentStore.status === 'SUSPENDED' ? 'destructive' :
                                                 'outline'
                                 }
                             >
-                                {store.status}
+                                {currentStore.status}
                             </Badge>
                         </div>
                         <div>
                             <p className="text-sm font-medium">Xác thực</p>
                             <Badge
                                 variant={
-                                    store.verificationStatus === 'VERIFIED' ? 'default' :
-                                        store.verificationStatus === 'PENDING' ? 'secondary' :
-                                            store.verificationStatus === 'REJECTED' ? 'destructive' :
+                                    currentStore.verificationStatus === 'VERIFIED' ? 'default' :
+                                        currentStore.verificationStatus === 'PENDING' ? 'secondary' :
+                                            currentStore.verificationStatus === 'REJECTED' ? 'destructive' :
                                                 'outline'
                                 }
                             >
-                                {store.verificationStatus}
+                                {currentStore.verificationStatus}
                             </Badge>
                         </div>
                     </div>
@@ -109,19 +90,19 @@ const SellerDashboard = () => {
                                 <p className="text-sm font-medium flex items-center gap-1">
                                     <Phone className="w-4 h-4" /> Điện thoại
                                 </p>
-                                <p>{store.phone || 'Chưa cập nhật'}</p>
+                                <p>{currentStore.phone || 'Chưa cập nhật'}</p>
                             </div>
                             <div>
                                 <p className="text-sm font-medium flex items-center gap-1">
                                     <Globe className="w-4 h-4" /> Website
                                 </p>
-                                <p>{store.website || 'Chưa cập nhật'}</p>
+                                <p>{currentStore.website || 'Chưa cập nhật'}</p>
                             </div>
                             <div>
                                 <p className="text-sm font-medium flex items-center gap-1">
                                     <Globe className="w-4 h-4" /> Email
                                 </p>
-                                <p>{store.email || 'Chưa cập nhật'}</p>
+                                <p>{currentStore.email || 'Chưa cập nhật'}</p>
                             </div>
                         </div>
                     </div>
@@ -134,7 +115,7 @@ const SellerDashboard = () => {
                         </h3>
                         <div className="grid grid-cols-1 gap-2">
                             <p className="text-sm font-medium">Địa chỉ chi tiết</p>
-                            <p>{store.address}</p>
+                            <p>{currentStore.address}</p>
                         </div>
                     </div>
 
@@ -147,19 +128,19 @@ const SellerDashboard = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <p className="text-sm font-medium">Tên doanh nghiệp</p>
-                                <p>{store.businessName || 'Chưa cập nhật'}</p>
+                                <p>{currentStore.businessName || 'Chưa cập nhật'}</p>
                             </div>
                             <div>
                                 <p className="text-sm font-medium">Địa chỉ doanh nghiệp</p>
-                                <p>{store.businessAddress || 'Chưa cập nhật'}</p>
+                                <p>{currentStore.businessAddress || 'Chưa cập nhật'}</p>
                             </div>
                             <div>
                                 <p className="text-sm font-medium">Mã số thuế</p>
-                                <p>{store.taxCode || 'Chưa cập nhật'}</p>
+                                <p>{currentStore.taxCode || 'Chưa cập nhật'}</p>
                             </div>
                             <div>
                                 <p className="text-sm font-medium">Giấy phép kinh doanh</p>
-                                <p>{store.businessLicense || 'Chưa cập nhật'}</p>
+                                <p>{currentStore.businessLicense || 'Chưa cập nhật'}</p>
                             </div>
                         </div>
                     </div>
@@ -173,15 +154,15 @@ const SellerDashboard = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <p className="text-sm font-medium">Chính sách đổi trả</p>
-                                <p className="whitespace-pre-wrap">{store.returnPolicy || 'Chưa cập nhật'}</p>
+                                <p className="whitespace-pre-wrap">{currentStore.returnPolicy || 'Chưa cập nhật'}</p>
                             </div>
                             <div>
                                 <p className="text-sm font-medium">Chính sách vận chuyển</p>
-                                <p className="whitespace-pre-wrap">{store.shippingPolicy || 'Chưa cập nhật'}</p>
+                                <p className="whitespace-pre-wrap">{currentStore.shippingPolicy || 'Chưa cập nhật'}</p>
                             </div>
                             <div>
                                 <p className="text-sm font-medium">Chính sách bảo hành</p>
-                                <p className="whitespace-pre-wrap">{store.warrantyPolicy || 'Chưa cập nhật'}</p>
+                                <p className="whitespace-pre-wrap">{currentStore.warrantyPolicy || 'Chưa cập nhật'}</p>
                             </div>
                         </div>
                     </div>
@@ -195,9 +176,9 @@ const SellerDashboard = () => {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
                                 <p className="text-sm font-medium">Facebook</p>
-                                {store.facebookUrl ? (
-                                    <a href={store.facebookUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
-                                        {store.facebookUrl}
+                                {currentStore.facebookUrl ? (
+                                    <a href={currentStore.facebookUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+                                        {currentStore.facebookUrl}
                                     </a>
                                 ) : (
                                     <p>Chưa cập nhật</p>
@@ -205,9 +186,9 @@ const SellerDashboard = () => {
                             </div>
                             <div>
                                 <p className="text-sm font-medium">Instagram</p>
-                                {store.instagramUrl ? (
-                                    <a href={store.instagramUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
-                                        {store.instagramUrl}
+                                {currentStore.instagramUrl ? (
+                                    <a href={currentStore.instagramUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+                                        {currentStore.instagramUrl}
                                     </a>
                                 ) : (
                                     <p>Chưa cập nhật</p>
@@ -215,9 +196,9 @@ const SellerDashboard = () => {
                             </div>
                             <div>
                                 <p className="text-sm font-medium">Youtube</p>
-                                {store.youtubeUrl ? (
-                                    <a href={store.youtubeUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
-                                        {store.youtubeUrl}
+                                {currentStore.youtubeUrl ? (
+                                    <a href={currentStore.youtubeUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+                                        {currentStore.youtubeUrl}
                                     </a>
                                 ) : (
                                     <p>Chưa cập nhật</p>
@@ -235,26 +216,26 @@ const SellerDashboard = () => {
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             <div>
                                 <p className="text-sm font-medium">Hoạt động</p>
-                                <Badge variant={store.isActive ? 'default' : 'secondary'}>
-                                    {store.isActive ? 'Đang hoạt động' : 'Tạm ngưng'}
+                                <Badge variant={currentStore.isActive ? 'default' : 'secondary'}>
+                                    {currentStore.isActive ? 'Đang hoạt động' : 'Tạm ngưng'}
                                 </Badge>
                             </div>
                             <div>
                                 <p className="text-sm font-medium">Nổi bật</p>
-                                <Badge variant={store.isFeatured ? 'default' : 'secondary'}>
-                                    {store.isFeatured ? 'Có' : 'Không'}
+                                <Badge variant={currentStore.isFeatured ? 'default' : 'secondary'}>
+                                    {currentStore.isFeatured ? 'Có' : 'Không'}
                                 </Badge>
                             </div>
                             <div>
                                 <p className="text-sm font-medium">Xác thực</p>
-                                <Badge variant={store.isVerified ? 'default' : 'secondary'}>
-                                    {store.isVerified ? 'Đã xác thực' : 'Chưa xác thực'}
+                                <Badge variant={currentStore.isVerified ? 'default' : 'secondary'}>
+                                    {currentStore.isVerified ? 'Đã xác thực' : 'Chưa xác thực'}
                                 </Badge>
                             </div>
                             <div>
                                 <p className="text-sm font-medium">Cửa hàng chính thức</p>
-                                <Badge variant={store.isOfficialStore ? 'default' : 'secondary'}>
-                                    {store.isOfficialStore ? 'Có' : 'Không'}
+                                <Badge variant={currentStore.isOfficialStore ? 'default' : 'secondary'}>
+                                    {currentStore.isOfficialStore ? 'Có' : 'Không'}
                                 </Badge>
                             </div>
                         </div>
@@ -272,30 +253,30 @@ const SellerDashboard = () => {
                                     <Star className="w-4 h-4" />
                                     Đánh giá
                                 </p>
-                                <p className="text-xl font-semibold">{store.rating.toFixed(1)}/5</p>
-                                <p className="text-sm text-muted-foreground">({store.reviewCount} đánh giá)</p>
+                                <p className="text-xl font-semibold">{currentStore.rating.toFixed(1)}/5</p>
+                                <p className="text-sm text-muted-foreground">({currentStore.reviewCount} đánh giá)</p>
                             </div>
                             <div className="p-4 bg-secondary/10 rounded-lg">
                                 <p className="text-sm font-medium flex items-center gap-1 mb-2">
                                     <Users className="w-4 h-4" />
                                     Người theo dõi
                                 </p>
-                                <p className="text-xl font-semibold">{store.followerCount}</p>
+                                <p className="text-xl font-semibold">{currentStore.followerCount}</p>
                             </div>
                             <div className="p-4 bg-secondary/10 rounded-lg">
                                 <p className="text-sm font-medium flex items-center gap-1 mb-2">
                                     <ShoppingBag className="w-4 h-4" />
                                     Sản phẩm & Đơn hàng
                                 </p>
-                                <p className="text-xl font-semibold">{store.totalProducts}</p>
-                                <p className="text-sm text-muted-foreground">({store.totalOrders} đơn)</p>
+                                <p className="text-xl font-semibold">{currentStore.totalProducts}</p>
+                                <p className="text-sm text-muted-foreground">({currentStore.totalOrders} đơn)</p>
                             </div>
                             <div className="p-4 bg-secondary/10 rounded-lg">
                                 <p className="text-sm font-medium flex items-center gap-1 mb-2">
                                     <DollarSign className="w-4 h-4" />
                                     Doanh thu
                                 </p>
-                                <p className="text-xl font-semibold">{store.totalRevenue.toLocaleString('vi-VN')}đ</p>
+                                <p className="text-xl font-semibold">{currentStore.totalRevenue.toLocaleString('vi-VN')}đ</p>
                             </div>
                         </div>
                     </div>
@@ -309,10 +290,10 @@ const SellerDashboard = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <p className="text-sm font-medium mb-2">Logo</p>
-                                {store.logo ? (
+                                {currentStore.logo ? (
                                     <div className="relative w-32 h-32 rounded-lg overflow-hidden">
                                         <Image
-                                            src={store.logo}
+                                            src={currentStore.logo}
                                             alt="Store logo"
                                             fill
                                             className="object-cover"
@@ -326,10 +307,10 @@ const SellerDashboard = () => {
                             </div>
                             <div>
                                 <p className="text-sm font-medium mb-2">Banner</p>
-                                {store.banner ? (
+                                {currentStore.banner ? (
                                     <div className="relative w-full h-40 rounded-lg overflow-hidden">
                                         <Image
-                                            src={store.banner}
+                                            src={currentStore.banner}
                                             alt="Store banner"
                                             fill
                                             className="object-cover"
@@ -353,11 +334,11 @@ const SellerDashboard = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <p className="text-sm font-medium">Ngày tạo</p>
-                                <p>{format(new Date(store.createdAt), 'dd/MM/yyyy HH:mm', { locale: vi })}</p>
+                                <p>{format(new Date(currentStore.createdAt), 'dd/MM/yyyy HH:mm', { locale: vi })}</p>
                             </div>
                             <div>
                                 <p className="text-sm font-medium">Cập nhật lần cuối</p>
-                                <p>{format(new Date(store.updatedAt), 'dd/MM/yyyy HH:mm', { locale: vi })}</p>
+                                <p>{format(new Date(currentStore.updatedAt), 'dd/MM/yyyy HH:mm', { locale: vi })}</p>
                             </div>
                         </div>
                     </div>

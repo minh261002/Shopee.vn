@@ -17,6 +17,7 @@ import { ColumnDef } from '@tanstack/react-table'
 import Image from 'next/image'
 import Link from 'next/link'
 import { api } from '@/lib/axios'
+import { useStore } from '@/providers/store-context'
 
 import { format } from 'date-fns'
 import { vi } from 'date-fns/locale'
@@ -58,11 +59,17 @@ const ProductsList = () => {
     const [products, setProducts] = useState<Product[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [searchTerm, setSearchTerm] = useState('')
+    const { currentStore } = useStore()
 
     useEffect(() => {
         const fetchProducts = async () => {
+            if (!currentStore) {
+                setIsLoading(false)
+                return
+            }
+
             try {
-                const response = await api.get('/seller/products')
+                const response = await api.get(`/seller/products?storeId=${currentStore.id}`)
                 setProducts(response.data.products || [])
             } catch (error) {
                 console.error('Error fetching products:', error)
@@ -73,7 +80,7 @@ const ProductsList = () => {
         }
 
         fetchProducts()
-    }, [showError])
+    }, [showError, currentStore])
 
     const handleDelete = async (productId: string) => {
         try {

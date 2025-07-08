@@ -16,16 +16,31 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Lấy store của seller
+    const { searchParams } = new URL(request.url);
+    const storeId = searchParams.get("storeId");
+
+    if (!storeId) {
+      return NextResponse.json(
+        { error: "storeId is required" },
+        { status: 400 }
+      );
+    }
+
+    // Kiểm tra store có thuộc về seller này không
     const store = await prisma.store.findFirst({
-      where: { ownerId: session.user.id },
+      where: {
+        id: storeId,
+        ownerId: session.user.id,
+      },
     });
 
     if (!store) {
-      return NextResponse.json({ error: "Store not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Store not found or unauthorized" },
+        { status: 404 }
+      );
     }
 
-    const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "10");
     const search = searchParams.get("search") || "";
@@ -189,9 +204,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const data = await req.json();
+
+    // Get storeId from request body or query params
+    const storeId = data.storeId || req.url.split("?")[0].split("/").pop();
+
+    if (!storeId) {
+      return NextResponse.json(
+        { error: "storeId is required" },
+        { status: 400 }
+      );
+    }
+
     // Get store of current user
     const store = await prisma.store.findFirst({
       where: {
+        id: storeId,
         ownerId: session.user.id,
         status: "ACTIVE",
       },
@@ -203,8 +231,6 @@ export async function POST(req: Request) {
         { status: 404 }
       );
     }
-
-    const data = await req.json();
 
     // Check if product has brandId
     if (data.brandId) {
@@ -252,7 +278,9 @@ export async function POST(req: Request) {
     const product = await prisma.product.create({
       data: {
         ...data,
+        tags: data.tags ? JSON.stringify(data.tags) : null,
         storeId: store.id,
+        brandId: data.brandId, // Đảm bảo brandId được lưu
         status: finalStatus,
         publishedAt: finalStatus === "ACTIVE" ? new Date() : null,
         images: {
@@ -266,6 +294,43 @@ export async function POST(req: Request) {
               create: data.variants,
             }
           : undefined,
+      },
+      include: {
+        brand: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            logo: true,
+          },
+        },
+        category: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+          },
+        },
+        images: {
+          select: {
+            id: true,
+            url: true,
+            alt: true,
+            order: true,
+            isMain: true,
+          },
+        },
+        variants: {
+          select: {
+            id: true,
+            name: true,
+            sku: true,
+            price: true,
+            stock: true,
+            attributes: true,
+            isActive: true,
+          },
+        },
       },
     });
 

@@ -23,6 +23,7 @@ import { useRouter } from 'next/navigation'
 import { CloudinaryMultipleUpload } from '@/components/layouts/cloudinary-upload'
 import slugify from 'react-slugify'
 import { useToast } from '@/hooks/use-toast'
+import { useStore } from '@/providers/store-context'
 
 interface ProductVariant {
     id: string
@@ -64,6 +65,7 @@ function flattenCategories(categories: Category[], level: number = 0): { id: str
 const NewProduct = () => {
     const router = useRouter()
     const { success, error: showError } = useToast()
+    const { currentStore } = useStore()
 
     const [formData, setFormData] = useState({
         name: '',
@@ -98,6 +100,7 @@ const NewProduct = () => {
     const [variants, setVariants] = useState<ProductVariant[]>([])
     const [newTag, setNewTag] = useState('')
     const [categories, setCategories] = useState<{ id: string; name: string; level: number }[]>([]);
+    const [brands, setBrands] = useState<{ id: string; name: string }[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false)
 
     useEffect(() => {
@@ -107,13 +110,19 @@ const NewProduct = () => {
                 const categoriesRes = await api.get('/seller/categories')
                 const flattenedCategories = flattenCategories(categoriesRes.data);
                 setCategories(flattenedCategories);
+
+                // Fetch approved brands for current store
+                if (currentStore) {
+                    const brandsRes = await api.get(`/seller/brand-registration/approved?storeId=${currentStore.id}`)
+                    setBrands(brandsRes.data.brands);
+                }
             } catch (error) {
                 console.error('Error fetching data:', error)
             }
         }
 
         fetchData()
-    }, [])
+    }, [currentStore])
 
     const handleInputChange = (field: string, value: string | boolean) => {
         setFormData(prev => ({
@@ -173,6 +182,12 @@ const NewProduct = () => {
         setIsSubmitting(true)
 
         try {
+            // Kiểm tra có store được chọn không
+            if (!currentStore) {
+                showError('Vui lòng chọn cửa hàng trước khi tạo sản phẩm')
+                return
+            }
+
             // Validate required fields
             if (!formData.name || !formData.originalPrice || !formData.stock || !formData.categoryId) {
                 showError('Vui lòng điền đầy đủ các trường bắt buộc')
@@ -181,6 +196,7 @@ const NewProduct = () => {
 
             const productData = {
                 ...formData,
+                storeId: currentStore.id, // Truyền storeId từ currentStore
                 images: images.map(url => ({ url, alt: formData.name })),
                 variants: variants.length > 0 ? variants : undefined,
                 originalPrice: parseFloat(formData.originalPrice),
@@ -583,7 +599,22 @@ const NewProduct = () => {
                                     </Select>
                                 </div>
 
-
+                                <div className="space-y-2">
+                                    <Label htmlFor="brandId">Thương hiệu</Label>
+                                    <Select value={formData.brandId} onValueChange={(value) => handleInputChange('brandId', value)}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Chọn thương hiệu" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="">Không có thương hiệu</SelectItem>
+                                            {brands.map((brand) => (
+                                                <SelectItem key={brand.id} value={brand.id}>
+                                                    {brand.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
 
                                 {/* Tags */}
                                 <div className="space-y-2">
