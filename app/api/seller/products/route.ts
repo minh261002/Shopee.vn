@@ -179,227 +179,115 @@ export async function GET(request: NextRequest) {
 }
 
 // POST - Tạo sản phẩm mới
-export async function POST(request: NextRequest) {
+export async function POST(req: Request) {
   try {
     const session = await auth.api.getSession({
       headers: await headers(),
     });
 
-    if (!session?.user || session.user.role !== "SELLER") {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Lấy store của seller
+    // Get store of current user
     const store = await prisma.store.findFirst({
-      where: { ownerId: session.user.id },
+      where: {
+        ownerId: session.user.id,
+        status: "ACTIVE",
+      },
     });
 
     if (!store) {
-      return NextResponse.json({ error: "Store not found" }, { status: 404 });
-    }
-
-    const body = await request.json();
-    const {
-      name,
-      slug,
-      description,
-      shortDescription,
-      categoryId,
-      brandId,
-      originalPrice,
-      salePrice,
-      sku,
-      weight,
-      length,
-      width,
-      height,
-      stock,
-      lowStockThreshold = 5,
-      status = "DRAFT",
-      condition = "NEW",
-      tags = [],
-      metaTitle,
-      metaDescription,
-      metaKeywords,
-      features,
-      specifications,
-      isDigital = false,
-      isFeatured = false,
-      requiresShipping = true,
-      images = [],
-      variants = [],
-    } = body;
-
-    // Validation
-    if (!name || !originalPrice || stock === undefined || !categoryId) {
       return NextResponse.json(
-        { error: "Name, originalPrice, stock, and category are required" },
-        { status: 400 }
+        { error: "Không tìm thấy cửa hàng hoặc cửa hàng chưa được kích hoạt" },
+        { status: 404 }
       );
     }
 
-    // Check if SKU exists for this store
-    if (sku) {
-      const existingSku = await prisma.product.findFirst({
+    const data = await req.json();
+
+    // Check if product has brandId
+    if (data.brandId) {
+      // First check if the brand exists
+      const brand = await prisma.brand.findUnique({
+        where: { id: data.brandId },
+      });
+
+      if (!brand) {
+        return NextResponse.json(
+          { error: "Thương hiệu không tồn tại" },
+          { status: 400 }
+        );
+      }
+
+      // Check if store has approved brand registration for this brand
+      const brandRegistration = await prisma.brandRegistration.findFirst({
         where: {
-          sku,
           storeId: store.id,
+          brandId: data.brandId,
+          status: "APPROVED",
         },
       });
 
-      if (existingSku) {
+      if (!brandRegistration) {
         return NextResponse.json(
-          { error: "SKU already exists in your store" },
-          { status: 400 }
+          {
+            error:
+              "Bạn chưa được phép bán sản phẩm của thương hiệu này. Vui lòng đăng ký thương hiệu và chờ duyệt trước khi thêm sản phẩm.",
+          },
+          { status: 403 }
         );
       }
     }
 
-    // Generate slug if not provided
-    const finalSlug =
-      slug ||
-      name
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-z0-9\s-]/g, "")
-        .replace(/\s+/g, "-")
-        .replace(/-+/g, "-")
-        .trim();
+    // Handle product status based on store type and selected status
+    let finalStatus: ProductStatus = data.status;
 
-    // Check if slug exists
-    const existingSlug = await prisma.product.findFirst({
-      where: { slug: finalSlug },
-    });
-
-    if (existingSlug) {
-      return NextResponse.json(
-        { error: "Slug already exists" },
-        { status: 400 }
-      );
-    }
-
-    // Verify category exists
-    const category = await prisma.category.findUnique({
-      where: { id: categoryId },
-    });
-
-    if (!category) {
-      return NextResponse.json(
-        { error: "Category not found" },
-        { status: 400 }
-      );
-    }
-
-    // Verify brand exists if provided
-    if (brandId) {
-      const brand = await prisma.brand.findUnique({
-        where: { id: brandId },
-      });
-
-      if (!brand) {
-        return NextResponse.json({ error: "Brand not found" }, { status: 400 });
-      }
+    // If store is not OFFICIAL and trying to set status to ACTIVE
+    if (store.type !== "OFFICIAL" && data.status === "ACTIVE") {
+      finalStatus = "PENDING_APPROVAL";
     }
 
     // Create product
     const product = await prisma.product.create({
       data: {
-        name,
-        slug: finalSlug,
-        description,
-        shortDescription,
+        ...data,
         storeId: store.id,
-        categoryId,
-        brandId,
-        originalPrice: parseFloat(originalPrice),
-        salePrice: salePrice ? parseFloat(salePrice) : null,
-        sku,
-        weight: weight ? parseFloat(weight) : null,
-        length: length ? parseFloat(length) : null,
-        width: width ? parseFloat(width) : null,
-        height: height ? parseFloat(height) : null,
-        stock: parseInt(stock),
-        lowStockThreshold: parseInt(lowStockThreshold),
-        status: status as ProductStatus,
-        condition: condition as ProductCondition,
-        tags: tags.length > 0 ? JSON.stringify(tags) : null,
-        metaTitle,
-        metaDescription,
-        metaKeywords,
-        features: features ? JSON.stringify(features) : null,
-        specifications: specifications ? JSON.stringify(specifications) : null,
-        isDigital,
-        isFeatured,
-        requiresShipping,
-        publishedAt: status === "ACTIVE" ? new Date() : null,
-      },
-    });
-
-    // Create product images
-    if (images && images.length > 0) {
-      await Promise.all(
-        images.map(
-          (
-            image: { url: string; alt?: string; caption?: string },
-            index: number
-          ) =>
-            prisma.productImage.create({
-              data: {
-                productId: product.id,
-                url: image.url,
-                alt: image.alt || product.name,
-                caption: image.caption,
-                order: index,
-                isMain: index === 0,
-              },
-            })
-        )
-      );
-    }
-
-    // Create product variants
-    if (variants && variants.length > 0) {
-      await Promise.all(
-        variants.map(
-          (variant: {
-            name: string;
-            value: string;
-            price?: number;
-            stock: number;
-            sku: string;
-          }) =>
-            prisma.productVariant.create({
-              data: {
-                productId: product.id,
-                name: `${variant.name}: ${variant.value}`,
-                sku: variant.sku,
-                price: variant.price
-                  ? parseFloat(variant.price.toString())
-                  : null,
-                stock: parseInt(variant.stock.toString()),
-                attributes: JSON.stringify({ [variant.name]: variant.value }),
-              },
-            })
-        )
-      );
-    }
-
-    // Update store product count
-    await prisma.store.update({
-      where: { id: store.id },
-      data: {
-        totalProducts: {
-          increment: 1,
+        status: finalStatus,
+        publishedAt: finalStatus === "ACTIVE" ? new Date() : null,
+        images: {
+          create: data.images?.map((image: { url: string; alt: string }) => ({
+            url: image.url,
+            alt: image.alt,
+          })),
         },
+        variants: data.variants
+          ? {
+              create: data.variants,
+            }
+          : undefined,
       },
     });
 
-    return NextResponse.json(product, { status: 201 });
+    // If status was changed to PENDING_APPROVAL, inform the user
+    if (data.status === "ACTIVE" && finalStatus === "PENDING_APPROVAL") {
+      return NextResponse.json({
+        product,
+        message: "Sản phẩm đã được tạo và đang chờ duyệt trước khi đăng bán",
+      });
+    }
+
+    return NextResponse.json({
+      product,
+      message:
+        finalStatus === "DRAFT"
+          ? "Sản phẩm đã được lưu dưới dạng bản nháp"
+          : "Sản phẩm đã được tạo thành công",
+    });
   } catch (error) {
     console.error("Error creating product:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Có lỗi xảy ra khi tạo sản phẩm" },
       { status: 500 }
     );
   }

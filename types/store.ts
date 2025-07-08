@@ -551,7 +551,6 @@ export interface ProductFormData {
   description?: string;
   shortDescription?: string;
   categoryId: string;
-  brandId?: string;
   originalPrice: number;
   salePrice?: number;
   stock: number;

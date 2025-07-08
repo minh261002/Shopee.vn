@@ -34,13 +34,31 @@ interface ProductVariant {
 }
 
 interface Category {
-    id: string
-    name: string
+    id: string;
+    name: string;
+    slug: string;
+    image: string;
+    parentId: string | null;
+    children?: Category[];
 }
 
-interface Brand {
-    id: string
-    name: string
+// Recursive function to flatten categories with level indication
+function flattenCategories(categories: Category[], level: number = 0): { id: string; name: string; level: number }[] {
+    return categories.reduce<{ id: string; name: string; level: number }[]>((acc, category) => {
+        // Add current category with proper indentation
+        acc.push({
+            id: category.id,
+            name: category.name,
+            level
+        });
+
+        // Add children if they exist
+        if (category.children && category.children.length > 0) {
+            acc.push(...flattenCategories(category.children, level + 1));
+        }
+
+        return acc;
+    }, []);
 }
 
 const NewProduct = () => {
@@ -79,34 +97,18 @@ const NewProduct = () => {
     const [images, setImages] = useState<string[]>([])
     const [variants, setVariants] = useState<ProductVariant[]>([])
     const [newTag, setNewTag] = useState('')
-    const [categories, setCategories] = useState<Category[]>([])
-    const [brands, setBrands] = useState<Brand[]>([])
+    const [categories, setCategories] = useState<{ id: string; name: string; level: number }[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false)
 
     useEffect(() => {
         const fetchData = async () => {
             try {
-                // Fetch categories and brands from API
-                const [categoriesRes, brandsRes] = await Promise.all([
-                    api.get('/categories'),
-                    api.get('/brands'),
-                ])
-
-                setCategories(categoriesRes.data || [])
-                setBrands(brandsRes.data || [])
+                // Fetch categories from API
+                const categoriesRes = await api.get('/seller/categories')
+                const flattenedCategories = flattenCategories(categoriesRes.data);
+                setCategories(flattenedCategories);
             } catch (error) {
                 console.error('Error fetching data:', error)
-                // Fallback to mock data
-                setCategories([
-                    { id: '1', name: 'Điện thoại' },
-                    { id: '2', name: 'Laptop' },
-                    { id: '3', name: 'Phụ kiện' },
-                ])
-                setBrands([
-                    { id: '1', name: 'Apple' },
-                    { id: '2', name: 'Samsung' },
-                    { id: '3', name: 'Xiaomi' },
-                ])
             }
         }
 
@@ -569,29 +571,19 @@ const NewProduct = () => {
                                         </SelectTrigger>
                                         <SelectContent>
                                             {categories.map((category) => (
-                                                <SelectItem key={category.id} value={category.id}>
-                                                    {category.name}
+                                                <SelectItem
+                                                    key={category.id}
+                                                    value={category.id}
+                                                    className={category.level > 0 ? `pl-${category.level * 4}` : ''}
+                                                >
+                                                    {category.level > 0 ? '└ ' : ''}{category.name}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
                                     </Select>
                                 </div>
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="brandId">Thương hiệu</Label>
-                                    <Select value={formData.brandId} onValueChange={(value) => handleInputChange('brandId', value)}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Chọn thương hiệu" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {brands.map((brand) => (
-                                                <SelectItem key={brand.id} value={brand.id}>
-                                                    {brand.name}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
+
 
                                 {/* Tags */}
                                 <div className="space-y-2">
