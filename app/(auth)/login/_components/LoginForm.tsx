@@ -9,12 +9,13 @@ import { useAuthWithRecaptcha } from '@/hooks/use-auth-with-recaptcha'
 import { ErrorContext } from 'better-auth/react'
 import { Loader2, MailIcon } from 'lucide-react'
 import Image from 'next/image'
-import { toast } from 'sonner'
+import { useToast } from '@/hooks/use-toast'
 import { useRouter } from 'next/navigation'
 
 const LoginForm = () => {
     const router = useRouter();
     const { sendVerificationOtpWithRecaptcha, signInSocialWithRecaptcha } = useAuthWithRecaptcha();
+    const { success, error: showError, info } = useToast();
 
     const [isGooglePending, startGoogleTransition] = useTransition();
     const [isEmailPending, startEmailTransition] = useTransition();
@@ -28,14 +29,14 @@ const LoginForm = () => {
                     provider: "google",
                     callbackURL: "/api/auth/callback",
                     onSuccess: () => {
-                        toast.info("Đang chuyển hướng...");
+                        info("Đang chuyển hướng...");
                     },
                     onError: (error: ErrorContext) => {
-                        toast.error(error.error?.message || "Lỗi đăng nhập. Vui lòng thử lại.");
+                        showError(error.error?.message || "Lỗi đăng nhập. Vui lòng thử lại.");
                     },
                 });
             } catch {
-                toast.error("Lỗi xác thực reCAPTCHA. Vui lòng thử lại.");
+                showError("Lỗi xác thực reCAPTCHA. Vui lòng thử lại.");
             }
         })
     }
@@ -47,15 +48,15 @@ const LoginForm = () => {
                     email: email,
                     type: "sign-in",
                     onSuccess: () => {
-                        toast.success("OTP đã được gửi đến email");
+                        success("OTP đã được gửi đến email");
                         router.push(`/verify-request?email=${email}`);
                     },
                     onError: (error: ErrorContext) => {
-                        toast.error(error.error?.message || "Lỗi gửi OTP");
+                        showError(error.error?.message || "Lỗi gửi OTP");
                     },
                 });
             } catch {
-                toast.error("Lỗi xác thực reCAPTCHA. Vui lòng thử lại.");
+                showError("Lỗi xác thực reCAPTCHA. Vui lòng thử lại.");
             }
         })
     }

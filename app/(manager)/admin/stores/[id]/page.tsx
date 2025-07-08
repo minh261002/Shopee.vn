@@ -208,20 +208,6 @@ const StoreDetailPage = ({ params }: { params: Promise<{ id: string }> }) => {
                         <div className="grid grid-cols-1 gap-2">
                             <p className="text-sm font-medium">Địa chỉ chi tiết</p>
                             <p>{store.address}</p>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div>
-                                    <p className="text-sm font-medium">Phường/Xã</p>
-                                    <p>{store.ward || 'Chưa cập nhật'}</p>
-                                </div>
-                                <div>
-                                    <p className="text-sm font-medium">Tỉnh/Thành phố</p>
-                                    <p>{store.city || 'Chưa cập nhật'}</p>
-                                </div>
-                                <div>
-                                    <p className="text-sm font-medium">Quốc gia</p>
-                                    <p>{store.country}</p>
-                                </div>
-                            </div>
                         </div>
                     </div>
 

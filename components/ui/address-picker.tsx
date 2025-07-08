@@ -35,9 +35,10 @@ interface AddressPickerProps {
     }) => void;
     placeholder?: string;
     className?: string;
+    isStore?: boolean;
 }
 
-const AddressPicker = ({ value, onChange, placeholder = "Chọn địa chỉ", className = "" }: AddressPickerProps) => {
+const AddressPicker = ({ value, onChange, placeholder = "Chọn địa chỉ", className = "", isStore = false }: AddressPickerProps) => {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedPlace, setSelectedPlace] = useState<{
@@ -237,7 +238,7 @@ const AddressPicker = ({ value, onChange, placeholder = "Chọn địa chỉ", c
                     </Button>
                 </div>
             </div>
-            {value.address && (
+            {value.address && !isStore && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <Label>Loại địa chỉ</Label>

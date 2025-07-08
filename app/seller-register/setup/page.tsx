@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import { redirect } from 'next/navigation';
 import {
   Store,
   Phone,
@@ -29,10 +28,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { toast } from 'sonner';
 import MaxWidthWrapper from '@/components/layouts/MaxWidthWrapper';
 import AddressPicker from '@/components/ui/address-picker';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { motion } from 'framer-motion';
 import api from '@/lib/axios';
 import { authClient } from '@/lib/auth-client';
+import { useRouter } from 'next/navigation';
 
 interface FormData {
   // Basic info
@@ -53,9 +53,6 @@ interface FormData {
 
   // Location
   address: string;
-  ward: string;
-  city: string;
-  country: string;
   lat?: number;
   lng?: number;
 
@@ -80,10 +77,12 @@ interface AddressData {
 
 const SetupStore = () => {
   const { data: session } = authClient.useSession();
+  const router = useRouter();
+  const topRef = React.useRef<HTMLDivElement>(null);
 
   // Kiểm tra đăng nhập
   if (!session) {
-    redirect('/login');
+    router.push('/login');
   }
 
   // Middleware đã xử lý phân quyền, không cần kiểm tra role ở đây nữa
@@ -104,11 +103,8 @@ const SetupStore = () => {
     taxCode: '',
     businessLicense: '',
     address: '',
-    ward: '',
-    city: '',
     lat: undefined,
     lng: undefined,
-    country: 'Vietnam',
     returnPolicy: '',
     shippingPolicy: '',
     warrantyPolicy: '',
@@ -179,11 +175,13 @@ const SetupStore = () => {
   const handleNext = () => {
     if (validateStep(currentStep)) {
       setCurrentStep(currentStep + 1);
+      topRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
   const handlePrevious = () => {
     setCurrentStep(currentStep - 1);
+    topRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   const handleSubmit = async () => {
@@ -209,7 +207,7 @@ const SetupStore = () => {
       await new Promise(resolve => setTimeout(resolve, 10000));
 
       toast.success('Đăng ký cửa hàng thành công! Đang chờ phê duyệt.');
-      redirect('/seller/dashboard');
+      router.push('/seller/dashboard');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Có lỗi xảy ra');
       setShowLoadingModal(false);
@@ -397,6 +395,7 @@ const SetupStore = () => {
             </CardHeader>
             <CardContent className="space-y-6">
               <AddressPicker
+                isStore={true}
                 value={{
                   address: formData.address,
                   lat: formData.lat,
@@ -404,30 +403,6 @@ const SetupStore = () => {
                 }}
                 onChange={handleAddressChange}
               />
-
-              <div>
-                <Label htmlFor="city" className="text-base">Tỉnh/Thành phố</Label>
-                <Input
-                  id="city"
-                  name="city"
-                  value={formData.city}
-                  onChange={handleInputChange}
-                  placeholder="Tỉnh/Thành phố"
-                  className="mt-1.5"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="ward" className="text-base">Xã/Phường</Label>
-                <Input
-                  id="ward"
-                  name="ward"
-                  value={formData.ward}
-                  onChange={handleInputChange}
-                  placeholder="Xã/Phường"
-                  className="mt-1.5"
-                />
-              </div>
             </CardContent>
           </Card>
         );
@@ -452,7 +427,7 @@ const SetupStore = () => {
                   name="businessName"
                   value={formData.businessName}
                   onChange={handleInputChange}
-                  placeholder="Công ty TNHH ABC"
+                  placeholder="Công ty TNHH Shopee"
                   className="mt-1.5"
                 />
               </div>
@@ -464,7 +439,7 @@ const SetupStore = () => {
                   name="businessAddress"
                   value={formData.businessAddress}
                   onChange={handleInputChange}
-                  placeholder="Địa chỉ đăng ký kinh doanh"
+                  placeholder="Địa chỉ đăng ký kinh doanh của bạn"
                   className="mt-1.5"
                 />
               </div>
@@ -476,7 +451,7 @@ const SetupStore = () => {
                   name="taxCode"
                   value={formData.taxCode}
                   onChange={handleInputChange}
-                  placeholder="0123456789"
+                  placeholder="Mã số thuế của bạn"
                   className="mt-1.5"
                 />
               </div>
@@ -488,7 +463,7 @@ const SetupStore = () => {
                   name="businessLicense"
                   value={formData.businessLicense}
                   onChange={handleInputChange}
-                  placeholder="Số giấy phép"
+                  placeholder="Số giấy phép kinh doanh của bạn"
                   className="mt-1.5"
                 />
               </div>
@@ -565,6 +540,7 @@ const SetupStore = () => {
   return (
     <>
       <MaxWidthWrapper className="py-8">
+        <div ref={topRef}></div>
         <div className="max-w-3xl mx-auto">
           <div className="mb-8">
             <h1 className="text-3xl font-bold mb-2">Đăng ký cửa hàng</h1>
@@ -649,6 +625,7 @@ const SetupStore = () => {
 
       {/* Loading Modal */}
       <Dialog open={showLoadingModal} onOpenChange={() => { }}>
+        <DialogTitle className='sr-only'>Đang cấu hình cửa hàng</DialogTitle>
         <DialogContent className="sm:max-w-md !p-0 !gap-0 overflow-hidden" showCloseButton={false}>
           <div className="bg-gradient-to-br from-[#ee4d2d] to-[#ff7337] h-[400px] w-full relative flex flex-col items-center justify-center text-white overflow-hidden">
             {/* Animated Background */}

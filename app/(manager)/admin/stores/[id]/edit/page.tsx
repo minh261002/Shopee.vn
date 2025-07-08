@@ -31,9 +31,6 @@ const initialFormData: Partial<StoreData> = {
     taxCode: '',
     businessLicense: '',
     address: '',
-    ward: '',
-    city: '',
-    country: 'Vietnam',
     returnPolicy: '',
     shippingPolicy: '',
     warrantyPolicy: '',
@@ -266,54 +263,7 @@ const EditStorePage = ({ params }: { params: Promise<{ id: string }> }) => {
                         {/* Location */}
                         <div className="space-y-4">
                             <h3 className="text-lg font-medium">Địa chỉ</h3>
-                            <div className="grid grid-cols-1 gap-4">
-                                <div className="space-y-2">
-                                    <label htmlFor="address" className="text-sm font-medium">
-                                        Địa chỉ chi tiết *
-                                    </label>
-                                    <Input
-                                        id="address"
-                                        value={formData.address}
-                                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                                        placeholder="Nhập địa chỉ chi tiết"
-                                    />
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div className="space-y-2">
-                                        <label htmlFor="ward" className="text-sm font-medium">
-                                            Phường/Xã
-                                        </label>
-                                        <Input
-                                            id="ward"
-                                            value={formData.ward}
-                                            onChange={(e) => setFormData({ ...formData, ward: e.target.value })}
-                                            placeholder="Nhập phường/xã"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label htmlFor="city" className="text-sm font-medium">
-                                            Tỉnh/Thành phố
-                                        </label>
-                                        <Input
-                                            id="city"
-                                            value={formData.city}
-                                            onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                                            placeholder="Nhập tỉnh/thành phố"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label htmlFor="country" className="text-sm font-medium">
-                                            Quốc gia
-                                        </label>
-                                        <Input
-                                            id="country"
-                                            value={formData.country}
-                                            onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                                            placeholder="Nhập quốc gia"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
+
                         </div>
 
                         {/* Policies */}

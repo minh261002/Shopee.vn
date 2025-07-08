@@ -45,16 +45,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
 
     // Validate required fields
-    const requiredFields = [
-      "name",
-      "phone",
-      "email",
-      "address",
-      "lat",
-      "lng",
-      "city",
-      "ward",
-    ];
+    const requiredFields = ["name", "phone", "email", "address", "lat", "lng"];
     for (const field of requiredFields) {
       if (!body[field]) {
         return NextResponse.json(
@@ -99,8 +90,6 @@ export async function POST(req: NextRequest) {
 
         // Location
         address: body.address,
-        ward: body.ward,
-        city: body.city,
         lat: Number(body.lat),
         lng: Number(body.lng),
 

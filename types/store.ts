@@ -33,9 +33,6 @@ export interface StoreData {
   taxCode?: string;
   businessLicense?: string;
   address: string;
-  ward?: string;
-  city?: string;
-  country: string;
   lat?: number;
   lng?: number;
   totalProducts: number;
@@ -85,10 +82,6 @@ export interface Store {
 
   // Location
   address: string;
-  ward?: string;
-  district?: string;
-  city?: string;
-  country: string;
   latitude?: number;
   longitude?: number;
 
@@ -542,9 +535,6 @@ export interface StoreFormData {
   phone?: string;
   website?: string;
   address: string;
-  ward?: string;
-  district?: string;
-  city?: string;
   businessName?: string;
   businessAddress?: string;
   taxCode?: string;

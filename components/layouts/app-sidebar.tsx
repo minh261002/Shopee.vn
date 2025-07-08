@@ -14,6 +14,7 @@ import {
   BarChart3,
   Settings,
   Star,
+  Tag,
 } from "lucide-react"
 
 import { NavMain } from "@/components/layouts/nav-main"
@@ -50,6 +51,21 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         title: "Cửa hàng",
         url: "/admin/stores",
         icon: Store,
+      },
+      {
+        title: "Thương hiệu",
+        url: "/admin/brands",
+        icon: Tag,
+        items: [
+          {
+            title: "Danh sách",
+            url: "/admin/brands",
+          },
+          {
+            title: "Thêm mới",
+            url: "/admin/brands/new",
+          },
+        ]
       },
       {
         title: "Danh mục ",

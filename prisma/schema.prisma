@@ -480,10 +480,7 @@ model Store {
   businessAddress String? @db.Text
 
   // Location
-  address String  @db.Text
-  ward    String? // Phường/Xã
-  city    String? // Tỉnh/Thành phố
-  country String  @default("Vietnam")
+  address String @db.Text
   lat     Float?
   lng     Float?
 
@@ -531,7 +528,6 @@ model Store {
   @@index([ownerId])
   @@index([status])
   @@index([type])
-  @@index([city])
   @@index([rating])
   @@index([isActive])
   @@index([isFeatured])

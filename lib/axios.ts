@@ -1,5 +1,5 @@
 import axios from "axios";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
 
 // Create axios instance
 export const api = axios.create({
@@ -29,39 +29,27 @@ api.interceptors.response.use(
   (error) => {
     // Handle different error types
     if (error.code === "ECONNABORTED") {
-      toast.error("Yêu cầu hết thời gian chờ. Vui lòng thử lại.");
+      useToast().error("Yêu cầu hết thời gian chờ. Vui lòng thử lại.");
     } else if (error.response) {
       // Server responded with error status
       const { status, data } = error.response;
 
-      switch (status) {
-        case 400:
-          toast.error(data.message || "Dữ liệu không hợp lệ");
-          break;
-        case 401:
-          toast.error("Phiên đăng nhập đã hết hạn");
+      // Use apiError method for better handling
+      useToast().error(data?.message || "Có lỗi xảy ra");
+
+      // Special handling for 401 (redirect to login)
+      if (status === 401) {
+        // Use setTimeout to avoid blocking the current execution
+        setTimeout(() => {
           window.location.href = "/login";
-        case 403:
-          toast.error("Bạn không có quyền thực hiện hành động này");
-          break;
-        case 404:
-          toast.error("Không tìm thấy dữ liệu");
-          break;
-        case 429:
-          toast.error("Quá nhiều yêu cầu. Vui lòng thử lại sau.");
-          break;
-        case 500:
-          toast.error("Lỗi server nội bộ. Vui lòng thử lại sau.");
-          break;
-        default:
-          toast.error(data.message || "Có lỗi xảy ra");
+        }, 1000);
       }
     } else if (error.request) {
       // Network error
-      toast.error("Lỗi kết nối mạng. Vui lòng kiểm tra kết nối internet.");
+      useToast().error("Lỗi kết nối mạng. Vui lòng kiểm tra kết nối internet.");
     } else {
       // Something else happened
-      toast.error("Có lỗi không xác định xảy ra");
+      useToast().error("Có lỗi không xác định xảy ra");
     }
 
     return Promise.reject(error);
