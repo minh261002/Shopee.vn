@@ -15,13 +15,14 @@ import {
 } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, X, Plus, Minus } from 'lucide-react'
+import { X, Plus, Minus, Package } from 'lucide-react'
 import Link from 'next/link'
 import { ProductStatus, ProductCondition } from '@prisma/client'
 import { api } from '@/lib/axios'
 import { useRouter } from 'next/navigation'
 import { CloudinaryMultipleUpload } from '@/components/layouts/cloudinary-upload'
 import slugify from 'react-slugify'
+import { useToast } from '@/hooks/use-toast'
 
 interface ProductVariant {
     id: string
@@ -44,6 +45,7 @@ interface Brand {
 
 const NewProduct = () => {
     const router = useRouter()
+    const { success, error: showError } = useToast()
 
     const [formData, setFormData] = useState({
         name: '',
@@ -111,13 +113,13 @@ const NewProduct = () => {
         fetchData()
     }, [])
 
-    const handleInputChange = (field: string, value: string) => {
+    const handleInputChange = (field: string, value: string | boolean) => {
         setFormData(prev => ({
             ...prev,
             [field]: value
         }))
 
-        if (field === 'name') {
+        if (field === 'name' && typeof value === 'string') {
             setFormData(prev => ({
                 ...prev,
                 slug: slugify(value)
@@ -169,9 +171,15 @@ const NewProduct = () => {
         setIsSubmitting(true)
 
         try {
+            // Validate required fields
+            if (!formData.name || !formData.originalPrice || !formData.stock || !formData.categoryId) {
+                showError('Vui lòng điền đầy đủ các trường bắt buộc')
+                return
+            }
+
             const productData = {
                 ...formData,
-                images,
+                images: images.map(url => ({ url, alt: formData.name })),
                 variants: variants.length > 0 ? variants : undefined,
                 originalPrice: parseFloat(formData.originalPrice),
                 salePrice: formData.salePrice ? parseFloat(formData.salePrice) : undefined,
@@ -181,17 +189,26 @@ const NewProduct = () => {
                 height: formData.height ? parseFloat(formData.height) : undefined,
                 stock: parseInt(formData.stock),
                 lowStockThreshold: parseInt(formData.lowStockThreshold),
-                features: formData.features ? JSON.parse(formData.features) : undefined,
-                specifications: formData.specifications ? JSON.parse(formData.specifications) : undefined,
+                // Handle features and specs as objects, not JSON strings
+                features: formData.features ? { description: formData.features } : undefined,
+                specifications: formData.specifications ? { description: formData.specifications } : undefined,
             }
 
             await api.post('/seller/products', productData)
 
-            alert('Sản phẩm đã được tạo thành công!')
+            success('Sản phẩm đã được tạo thành công!')
             router.push('/seller/products')
         } catch (error) {
             console.error('Error creating product:', error)
-            alert('Có lỗi xảy ra khi tạo sản phẩm')
+
+            if (error && typeof error === 'object' && 'response' in error &&
+                error.response && typeof error.response === 'object' &&
+                'data' in error.response && error.response.data &&
+                typeof error.response.data === 'object' && 'error' in error.response.data) {
+                showError(String(error.response.data.error))
+            } else {
+                showError('Có lỗi xảy ra khi tạo sản phẩm')
+            }
         } finally {
             setIsSubmitting(false)
         }
@@ -199,16 +216,6 @@ const NewProduct = () => {
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center gap-4">
-                <Button variant="outline" size="sm" asChild>
-                    <Link href="/seller/products">
-                        <ArrowLeft className="w-4 h-4 mr-2" />
-                        Quay lại
-                    </Link>
-                </Button>
-                <h1 className="text-2xl font-bold">Thêm sản phẩm mới</h1>
-            </div>
-
             <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Main Info */}
@@ -524,7 +531,7 @@ const NewProduct = () => {
                                         <Checkbox
                                             id="isFeatured"
                                             checked={formData.isFeatured}
-                                            onCheckedChange={(checked) => handleInputChange('isFeatured', checked.toString())}
+                                            onCheckedChange={(checked) => handleInputChange('isFeatured', !!checked)}
                                         />
                                         <Label htmlFor="isFeatured">Sản phẩm nổi bật</Label>
                                     </div>
@@ -532,7 +539,7 @@ const NewProduct = () => {
                                         <Checkbox
                                             id="isDigital"
                                             checked={formData.isDigital}
-                                            onCheckedChange={(checked) => handleInputChange('isDigital', checked.toString())}
+                                            onCheckedChange={(checked) => handleInputChange('isDigital', !!checked)}
                                         />
                                         <Label htmlFor="isDigital">Sản phẩm số</Label>
                                     </div>
@@ -540,7 +547,7 @@ const NewProduct = () => {
                                         <Checkbox
                                             id="requiresShipping"
                                             checked={formData.requiresShipping}
-                                            onCheckedChange={(checked) => handleInputChange('requiresShipping', checked.toString())}
+                                            onCheckedChange={(checked) => handleInputChange('requiresShipping', !!checked)}
                                         />
                                         <Label htmlFor="requiresShipping">Cần vận chuyển</Label>
                                     </div>
@@ -653,17 +660,23 @@ const NewProduct = () => {
                                 </div>
                             </CardContent>
                         </Card>
-                    </div>
-                </div>
 
-                {/* Submit Buttons */}
-                <div className="flex justify-end gap-4">
-                    <Button type="button" variant="outline" asChild>
-                        <Link href="/seller/products">Hủy</Link>
-                    </Button>
-                    <Button type="submit" disabled={isSubmitting}>
-                        {isSubmitting ? 'Đang tạo...' : 'Tạo sản phẩm'}
-                    </Button>
+                        {/* Actions */}
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Thao tác</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-2">
+                                <Button type="submit" className="w-full" disabled={isSubmitting}>
+                                    <Package className="h-4 w-4 mr-2" />
+                                    {isSubmitting ? 'Đang tạo...' : 'Tạo sản phẩm'}
+                                </Button>
+                                <Button type="button" variant="outline" className="w-full" asChild>
+                                    <Link href="/seller/products">Hủy</Link>
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    </div>
                 </div>
             </form>
         </div>

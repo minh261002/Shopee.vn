@@ -1,15 +1,15 @@
 "use client";
 
 import React from 'react';
-import { BrickWallFireIcon, ChevronRight } from 'lucide-react';
+import { Megaphone, ChevronRight } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 
-interface CategoryLayoutProps {
+interface CampaignsLayoutProps {
     children: React.ReactNode;
 }
 
-const CategoryLayout = ({ children }: CategoryLayoutProps) => {
+const CampaignsLayout = ({ children }: CampaignsLayoutProps) => {
     const pathname = usePathname();
 
     const getBreadcrumbs = () => {
@@ -40,7 +40,7 @@ const CategoryLayout = ({ children }: CategoryLayoutProps) => {
             <div className='flex items-center justify-between'>
                 {/* Page Icon */}
                 <div className="flex items-center gap-2 text-muted-foreground">
-                    <BrickWallFireIcon className="h-5 w-5" />
+                    <Megaphone className="h-5 w-5" />
                     <span className="text-sm">Quản lý chiến dịch</span>
                 </div>
                 {/* Breadcrumb */}
@@ -65,4 +65,4 @@ const CategoryLayout = ({ children }: CategoryLayoutProps) => {
     );
 };
 
-export default CategoryLayout; 
+export default CampaignsLayout; 

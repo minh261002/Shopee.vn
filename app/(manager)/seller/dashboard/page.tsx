@@ -8,7 +8,7 @@ import Image from 'next/image'
 import { api } from '@/lib/axios'
 import { format } from 'date-fns'
 import { vi } from 'date-fns/locale'
-import { Skeleton } from '@/components/ui/skeleton'
+
 import type { StoreData } from '@/types/store'
 
 const SellerDashboard = () => {
@@ -34,10 +34,8 @@ const SellerDashboard = () => {
     if (isLoading) {
         return (
             <div className="space-y-6">
-                <Skeleton className="h-[200px] w-full" />
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Skeleton className="h-[300px]" />
-                    <Skeleton className="h-[300px]" />
+                <div className="flex items-center justify-center h-64">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 </div>
             </div>
         );
@@ -137,20 +135,6 @@ const SellerDashboard = () => {
                         <div className="grid grid-cols-1 gap-2">
                             <p className="text-sm font-medium">Địa chỉ chi tiết</p>
                             <p>{store.address}</p>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div>
-                                    <p className="text-sm font-medium">Phường/Xã</p>
-                                    <p>{store.ward || 'Chưa cập nhật'}</p>
-                                </div>
-                                <div>
-                                    <p className="text-sm font-medium">Tỉnh/Thành phố</p>
-                                    <p>{store.city || 'Chưa cập nhật'}</p>
-                                </div>
-                                <div>
-                                    <p className="text-sm font-medium">Quốc gia</p>
-                                    <p>{store.country}</p>
-                                </div>
-                            </div>
                         </div>
                     </div>
 

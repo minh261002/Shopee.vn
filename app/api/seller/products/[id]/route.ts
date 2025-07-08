@@ -70,14 +70,22 @@ export async function GET(
 
     return NextResponse.json({
       ...product,
+      // Parse JSON fields properly
+      tags: product.tags ? JSON.parse(product.tags) : [],
+      features: product.features ? JSON.parse(product.features) : undefined,
+      specifications: product.specifications
+        ? JSON.parse(product.specifications)
+        : undefined,
       store: {
         id: store.id,
         name: store.name,
         slug: store.slug,
         logo: store.logo,
         rating: store.rating,
-        isVerified: store.isVerified,
+        isVerified: store.verificationStatus === "VERIFIED",
       },
+      // Transform images to simple URLs for frontend compatibility
+      images: product.images.map((img) => img.url),
     });
   } catch (error) {
     console.error("Error fetching product:", error);

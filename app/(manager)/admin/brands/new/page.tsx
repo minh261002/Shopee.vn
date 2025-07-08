@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
-import { ArrowLeft, Tag } from 'lucide-react'
+import { Tag } from 'lucide-react'
 import Link from 'next/link'
 import { api } from '@/lib/axios'
 import { useRouter } from 'next/navigation'
@@ -90,19 +90,6 @@ const NewBrand = () => {
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center gap-4">
-                <Button variant="outline" size="sm" asChild>
-                    <Link href="/admin/brands">
-                        <ArrowLeft className="w-4 h-4 mr-2" />
-                        Quay lại
-                    </Link>
-                </Button>
-                <div className="flex items-center gap-2">
-                    <Tag className="w-5 h-5" />
-                    <h1 className="text-2xl font-bold">Thêm thương hiệu mới</h1>
-                </div>
-            </div>
-
             <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Main Info */}
@@ -249,17 +236,23 @@ const NewBrand = () => {
                                 </CardContent>
                             </Card>
                         )}
-                    </div>
-                </div>
 
-                {/* Submit Buttons */}
-                <div className="flex justify-end gap-4">
-                    <Button type="button" variant="outline" asChild>
-                        <Link href="/admin/brands">Hủy</Link>
-                    </Button>
-                    <Button type="submit" disabled={isSubmitting}>
-                        {isSubmitting ? 'Đang tạo...' : 'Tạo thương hiệu'}
-                    </Button>
+                        {/* Actions */}
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Thao tác</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-2">
+                                <Button type="submit" className="w-full" disabled={isSubmitting}>
+                                    <Tag className="h-4 w-4 mr-2" />
+                                    {isSubmitting ? 'Đang tạo...' : 'Tạo thương hiệu'}
+                                </Button>
+                                <Button type="button" variant="outline" className="w-full" asChild>
+                                    <Link href="/admin/brands">Hủy</Link>
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    </div>
                 </div>
             </form>
         </div>

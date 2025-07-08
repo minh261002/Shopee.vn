@@ -1,15 +1,15 @@
 "use client";
 
 import React from 'react';
-import { ChevronRight, ImagesIcon } from 'lucide-react';
+import { ChevronRight, Images } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 
-interface CategoryLayoutProps {
+interface BannersLayoutProps {
     children: React.ReactNode;
 }
 
-const CategoryLayout = ({ children }: CategoryLayoutProps) => {
+const BannersLayout = ({ children }: BannersLayoutProps) => {
     const pathname = usePathname();
 
     const getBreadcrumbs = () => {
@@ -40,7 +40,7 @@ const CategoryLayout = ({ children }: CategoryLayoutProps) => {
             <div className='flex items-center justify-between'>
                 {/* Page Icon */}
                 <div className="flex items-center gap-2 text-muted-foreground">
-                    <ImagesIcon className="h-5 w-5" />
+                    <Images className="h-5 w-5" />
                     <span className="text-sm">Quản lý banner</span>
                 </div>
                 {/* Breadcrumb */}
@@ -65,4 +65,4 @@ const CategoryLayout = ({ children }: CategoryLayoutProps) => {
     );
 };
 
-export default CategoryLayout; 
+export default BannersLayout; 

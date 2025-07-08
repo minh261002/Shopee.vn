@@ -17,7 +17,7 @@ import { ColumnDef } from '@tanstack/react-table'
 import Image from 'next/image'
 import Link from 'next/link'
 import { api } from '@/lib/axios'
-import { Skeleton } from '@/components/ui/skeleton'
+
 import { format } from 'date-fns'
 import { vi } from 'date-fns/locale'
 import { useToast } from '@/hooks/use-toast'
@@ -276,8 +276,9 @@ const BrandsList = () => {
     if (isLoading) {
         return (
             <div className="space-y-6">
-                <Skeleton className="h-[200px] w-full" />
-                <Skeleton className="h-[400px] w-full" />
+                <div className="flex items-center justify-center h-64">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
             </div>
         )
     }

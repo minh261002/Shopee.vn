@@ -9,7 +9,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { api } from '@/lib/axios'
 import { useRouter } from 'next/navigation'
-import { Skeleton } from '@/components/ui/skeleton'
+
 import { format } from 'date-fns'
 import { vi } from 'date-fns/locale'
 import {
@@ -99,16 +99,8 @@ const BrandDetail: React.FC<BrandDetailProps> = ({ params }) => {
     if (isLoading) {
         return (
             <div className="space-y-6">
-                <Skeleton className="h-16 w-full" />
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="lg:col-span-2 space-y-6">
-                        <Skeleton className="h-[300px] w-full" />
-                        <Skeleton className="h-[400px] w-full" />
-                    </div>
-                    <div className="space-y-6">
-                        <Skeleton className="h-[200px] w-full" />
-                        <Skeleton className="h-[100px] w-full" />
-                    </div>
+                <div className="flex items-center justify-center h-64">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 </div>
             </div>
         )

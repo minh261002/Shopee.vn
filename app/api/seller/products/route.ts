@@ -137,6 +137,12 @@ export async function GET(request: NextRequest) {
     const response: ProductsResponse = {
       products: products.map((product) => ({
         ...product,
+        // Parse JSON fields properly
+        tags: product.tags ? JSON.parse(product.tags) : [],
+        features: product.features ? JSON.parse(product.features) : undefined,
+        specifications: product.specifications
+          ? JSON.parse(product.specifications)
+          : undefined,
         brand: product.brand
           ? {
               ...product.brand,
@@ -149,8 +155,10 @@ export async function GET(request: NextRequest) {
           slug: store.slug,
           logo: store.logo || undefined,
           rating: store.rating,
-          isVerified: store.isVerified,
+          isVerified: store.verificationStatus === "VERIFIED",
         },
+        // Transform images to simple URLs for frontend compatibility
+        images: product.images.map((img) => img.url),
       })) as unknown as ProductWithRelations[],
       pagination: {
         page,

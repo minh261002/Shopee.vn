@@ -22,6 +22,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useParams, useRouter } from 'next/navigation'
 import { api } from '@/lib/axios'
+import { useToast } from '@/hooks/use-toast'
 import {
     AlertDialog,
     AlertDialogAction,
@@ -87,6 +88,7 @@ interface Product {
 const ProductDetail = () => {
     const params = useParams()
     const router = useRouter()
+    const { success, error: showError } = useToast()
     const [product, setProduct] = useState<Product | null>(null)
     const [loading, setLoading] = useState(true)
     const [deleting, setDeleting] = useState(false)
@@ -98,6 +100,7 @@ const ProductDetail = () => {
                 setProduct(response.data)
             } catch (error) {
                 console.error('Error fetching product:', error)
+                showError('Không thể tải thông tin sản phẩm')
                 router.push('/seller/products')
             } finally {
                 setLoading(false)
@@ -113,10 +116,11 @@ const ProductDetail = () => {
         setDeleting(true)
         try {
             await api.delete(`/seller/products/${params.id}`)
+            success('Xóa sản phẩm thành công')
             router.push('/seller/products')
         } catch (error) {
             console.error('Error deleting product:', error)
-            alert('Có lỗi xảy ra khi xóa sản phẩm')
+            showError('Có lỗi xảy ra khi xóa sản phẩm')
         } finally {
             setDeleting(false)
         }
@@ -131,9 +135,10 @@ const ProductDetail = () => {
                 status: newStatus
             })
             setProduct(response.data)
+            success(`Đã ${newStatus === 'ACTIVE' ? 'hiện' : 'ẩn'} sản phẩm`)
         } catch (error) {
             console.error('Error updating status:', error)
-            alert('Có lỗi xảy ra khi cập nhật trạng thái')
+            showError('Có lỗi xảy ra khi cập nhật trạng thái')
         }
     }
 
@@ -172,14 +177,9 @@ const ProductDetail = () => {
 
     if (loading) {
         return (
-            <div className="space-y-6 animate-pulse">
-                <div className="h-8 bg-gray-200 rounded w-64"></div>
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="lg:col-span-2 space-y-6">
-                        <div className="h-64 bg-gray-200 rounded"></div>
-                        <div className="h-32 bg-gray-200 rounded"></div>
-                    </div>
-                    <div className="h-96 bg-gray-200 rounded"></div>
+            <div className="space-y-6">
+                <div className="flex items-center justify-center h-64">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 </div>
             </div>
         )

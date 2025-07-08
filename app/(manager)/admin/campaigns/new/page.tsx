@@ -422,25 +422,30 @@ const CreateCampaignPage = () => {
                             </CardContent>
                         </Card>
 
-                        {/* Nút hành động */}
-                        <div className="flex justify-end gap-4">
-                            <Button type="button" variant="outline" onClick={handleBack}>
-                                Hủy
-                            </Button>
-                            <Button type="submit" disabled={isLoading}>
-                                {isLoading ? (
-                                    <>
-                                        <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                                        Đang tạo...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Save className="mr-2 h-4 w-4" />
-                                        Tạo chiến dịch
-                                    </>
-                                )}
-                            </Button>
-                        </div>
+                        {/* Actions */}
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Thao tác</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-2">
+                                <Button type="submit" className="w-full" disabled={isLoading}>
+                                    {isLoading ? (
+                                        <>
+                                            <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                            Đang tạo...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Save className="mr-2 h-4 w-4" />
+                                            Tạo chiến dịch
+                                        </>
+                                    )}
+                                </Button>
+                                <Button type="button" variant="outline" className="w-full" onClick={handleBack}>
+                                    Hủy
+                                </Button>
+                            </CardContent>
+                        </Card>
                     </div>
                 </div>
             </form>

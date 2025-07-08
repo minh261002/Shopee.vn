@@ -15,13 +15,14 @@ import {
 } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, X, Plus, Minus } from 'lucide-react'
+import { X, Plus, Minus, Package } from 'lucide-react'
 import Link from 'next/link'
 import { ProductStatus, ProductCondition } from '@prisma/client'
 import { api } from '@/lib/axios'
 import { useParams, useRouter } from 'next/navigation'
 import { CloudinaryMultipleUpload } from '@/components/layouts/cloudinary-upload'
 import slugify from 'react-slugify'
+import { useToast } from '@/hooks/use-toast'
 
 interface ProductVariant {
     id: string
@@ -77,6 +78,7 @@ interface Product {
 const EditProduct = () => {
     const params = useParams()
     const router = useRouter()
+    const { success, error: showError } = useToast()
 
     const [formData, setFormData] = useState({
         name: '',
@@ -143,12 +145,14 @@ const EditProduct = () => {
                     brandId: product.brandId || '',
                     status: product.status,
                     condition: product.condition,
-                    tags: product.tags,
+                    tags: Array.isArray(product.tags) ? product.tags : [],
                     metaTitle: product.metaTitle || '',
                     metaDescription: product.metaDescription || '',
                     metaKeywords: product.metaKeywords || '',
-                    features: product.features ? JSON.stringify(product.features) : '',
-                    specifications: product.specifications ? JSON.stringify(product.specifications) : '',
+                    features: product.features && typeof product.features === 'object'
+                        ? JSON.stringify(product.features) : '',
+                    specifications: product.specifications && typeof product.specifications === 'object'
+                        ? JSON.stringify(product.specifications) : '',
                     stock: product.stock.toString(),
                     lowStockThreshold: product.lowStockThreshold.toString(),
                     isDigital: product.isDigital,
@@ -156,23 +160,14 @@ const EditProduct = () => {
                     requiresShipping: product.requiresShipping,
                 })
 
-                setImages(product.images)
+                setImages(Array.isArray(product.images) ? product.images : [])
                 setVariants(product.variants)
                 setCategories(categoriesRes.data || [])
                 setBrands(brandsRes.data || [])
             } catch (error) {
                 console.error('Error fetching data:', error)
-                // Fallback to mock data for categories and brands
-                setCategories([
-                    { id: '1', name: 'Điện thoại' },
-                    { id: '2', name: 'Laptop' },
-                    { id: '3', name: 'Phụ kiện' },
-                ])
-                setBrands([
-                    { id: '1', name: 'Apple' },
-                    { id: '2', name: 'Samsung' },
-                    { id: '3', name: 'Xiaomi' },
-                ])
+                showError('Không thể tải dữ liệu sản phẩm')
+                router.push('/seller/products')
             } finally {
                 setLoading(false)
             }
@@ -184,13 +179,13 @@ const EditProduct = () => {
     }, [params.id])
 
 
-    const handleInputChange = (field: string, value: string) => {
+    const handleInputChange = (field: string, value: string | boolean) => {
         setFormData(prev => ({
             ...prev,
             [field]: value
         }))
 
-        if (field === 'name') {
+        if (field === 'name' && typeof value === 'string') {
             setFormData(prev => ({
                 ...prev,
                 slug: slugify(value)
@@ -241,9 +236,15 @@ const EditProduct = () => {
         setIsSubmitting(true)
 
         try {
+            // Validate required fields
+            if (!formData.name || !formData.originalPrice || !formData.stock || !formData.categoryId) {
+                showError('Vui lòng điền đầy đủ các trường bắt buộc')
+                return
+            }
+
             const productData = {
                 ...formData,
-                images,
+                images: images.map(url => ({ url, alt: formData.name })),
                 variants: variants.length > 0 ? variants : undefined,
                 originalPrice: parseFloat(formData.originalPrice),
                 salePrice: formData.salePrice ? parseFloat(formData.salePrice) : undefined,
@@ -253,17 +254,26 @@ const EditProduct = () => {
                 height: formData.height ? parseFloat(formData.height) : undefined,
                 stock: parseInt(formData.stock),
                 lowStockThreshold: parseInt(formData.lowStockThreshold),
-                features: formData.features ? JSON.parse(formData.features) : undefined,
-                specifications: formData.specifications ? JSON.parse(formData.specifications) : undefined,
+                // Handle JSON fields safely
+                features: formData.features ? { description: formData.features } : undefined,
+                specifications: formData.specifications ? { description: formData.specifications } : undefined,
             }
 
             await api.put(`/seller/products/${params.id}`, productData)
 
-            alert('Sản phẩm đã được cập nhật thành công!')
+            success('Sản phẩm đã được cập nhật thành công!')
             router.push(`/seller/products/${params.id}`)
         } catch (error) {
             console.error('Error updating product:', error)
-            alert('Có lỗi xảy ra khi cập nhật sản phẩm')
+
+            if (error && typeof error === 'object' && 'response' in error &&
+                error.response && typeof error.response === 'object' &&
+                'data' in error.response && error.response.data &&
+                typeof error.response.data === 'object' && 'error' in error.response.data) {
+                showError(String(error.response.data.error))
+            } else {
+                showError('Có lỗi xảy ra khi cập nhật sản phẩm')
+            }
         } finally {
             setIsSubmitting(false)
         }
@@ -271,14 +281,9 @@ const EditProduct = () => {
 
     if (loading) {
         return (
-            <div className="space-y-6 animate-pulse">
-                <div className="h-8 bg-gray-200 rounded w-64"></div>
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="lg:col-span-2 space-y-6">
-                        <div className="h-64 bg-gray-200 rounded"></div>
-                        <div className="h-32 bg-gray-200 rounded"></div>
-                    </div>
-                    <div className="h-96 bg-gray-200 rounded"></div>
+            <div className="space-y-6">
+                <div className="flex items-center justify-center h-64">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 </div>
             </div>
         )
@@ -286,16 +291,6 @@ const EditProduct = () => {
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center gap-4">
-                <Button variant="outline" size="sm" asChild>
-                    <Link href={`/seller/products/${params.id}`}>
-                        <ArrowLeft className="w-4 h-4 mr-2" />
-                        Quay lại
-                    </Link>
-                </Button>
-                <h1 className="text-2xl font-bold">Chỉnh sửa sản phẩm</h1>
-            </div>
-
             <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Main Info */}
@@ -753,17 +748,23 @@ const EditProduct = () => {
                                 </div>
                             </CardContent>
                         </Card>
-                    </div>
-                </div>
 
-                {/* Submit Buttons */}
-                <div className="flex justify-end gap-4">
-                    <Button type="button" variant="outline" asChild>
-                        <Link href={`/seller/products/${params.id}`}>Hủy</Link>
-                    </Button>
-                    <Button type="submit" disabled={isSubmitting}>
-                        {isSubmitting ? 'Đang cập nhật...' : 'Cập nhật sản phẩm'}
-                    </Button>
+                        {/* Actions */}
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Thao tác</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-2">
+                                <Button type="submit" className="w-full" disabled={isSubmitting}>
+                                    <Package className="h-4 w-4 mr-2" />
+                                    {isSubmitting ? 'Đang cập nhật...' : 'Cập nhật sản phẩm'}
+                                </Button>
+                                <Button type="button" variant="outline" className="w-full" asChild>
+                                    <Link href={`/seller/products/${params.id}`}>Hủy</Link>
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    </div>
                 </div>
             </form>
         </div>

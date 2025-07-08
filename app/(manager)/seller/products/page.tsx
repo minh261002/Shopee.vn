@@ -17,10 +17,22 @@ import { ColumnDef } from '@tanstack/react-table'
 import Image from 'next/image'
 import Link from 'next/link'
 import { api } from '@/lib/axios'
-import { Skeleton } from '@/components/ui/skeleton'
+
 import { format } from 'date-fns'
 import { vi } from 'date-fns/locale'
 import { ProductStatus } from '@prisma/client'
+import { useToast } from '@/hooks/use-toast'
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 
 // Local type matching our API response
 interface Product {
@@ -42,6 +54,7 @@ interface Product {
 }
 
 const ProductsList = () => {
+    const { success, error: showError } = useToast()
     const [products, setProducts] = useState<Product[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [searchTerm, setSearchTerm] = useState('')
@@ -53,13 +66,25 @@ const ProductsList = () => {
                 setProducts(response.data.products || [])
             } catch (error) {
                 console.error('Error fetching products:', error)
+                showError('Không thể tải danh sách sản phẩm')
             } finally {
                 setIsLoading(false)
             }
         }
 
         fetchProducts()
-    }, [])
+    }, [showError])
+
+    const handleDelete = async (productId: string) => {
+        try {
+            await api.delete(`/seller/products/${productId}`)
+            setProducts(products.filter(product => product.id !== productId))
+            success('Xóa sản phẩm thành công')
+        } catch (error) {
+            console.error('Error deleting product:', error)
+            showError('Có lỗi xảy ra khi xóa sản phẩm')
+        }
+    }
 
     const getStatusColor = (status: ProductStatus) => {
         switch (status) {
@@ -223,16 +248,35 @@ const ProductsList = () => {
                                     Chỉnh sửa
                                 </Link>
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                                className="text-red-600"
-                                onClick={() => {
-                                    // TODO: Implement delete functionality
-                                    console.log('Delete product:', product.id)
-                                }}
-                            >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Xóa
-                            </DropdownMenuItem>
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <DropdownMenuItem
+                                        className="text-red-600"
+                                        onSelect={(e) => e.preventDefault()}
+                                    >
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        Xóa
+                                    </DropdownMenuItem>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Xác nhận xóa sản phẩm</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            Bạn có chắc chắn muốn xóa sản phẩm &quot;{product.name}&quot;?
+                                            Hành động này không thể hoàn tác.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Hủy</AlertDialogCancel>
+                                        <AlertDialogAction
+                                            onClick={() => handleDelete(product.id)}
+                                            className="bg-red-600 hover:bg-red-700"
+                                        >
+                                            Xóa sản phẩm
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 )
@@ -249,8 +293,9 @@ const ProductsList = () => {
     if (isLoading) {
         return (
             <div className="space-y-6">
-                <Skeleton className="h-[200px] w-full" />
-                <Skeleton className="h-[400px] w-full" />
+                <div className="flex items-center justify-center h-64">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
             </div>
         )
     }

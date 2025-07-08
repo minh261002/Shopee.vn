@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Edit, Trash2, User, Mail, Shield, Calendar, Loader2, AlertCircle, ImageIcon } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, User, Mail, Shield, Calendar, AlertCircle, ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -80,10 +80,9 @@ const UserDetailPage = ({ params }: { params: Promise<{ id: string }> }) => {
 
     if (isFetching) {
         return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <div className="flex items-center gap-2">
-                    <Loader2 className="h-6 w-6 animate-spin" />
-                    <span>Đang tải thông tin người dùng...</span>
+            <div className="space-y-6">
+                <div className="flex items-center justify-center h-64">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 </div>
             </div>
         );
@@ -97,12 +96,12 @@ const UserDetailPage = ({ params }: { params: Promise<{ id: string }> }) => {
 
     if (!user) {
         return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <div className="text-center">
-                    <p className="text-muted-foreground">Không tìm thấy người dùng</p>
-                    <Button onClick={() => router.push('/admin/users')} className="mt-4">
-                        Quay lại danh sách
-                    </Button>
+            <div className="space-y-6">
+                <div className="text-center py-12">
+                    <h2 className="text-2xl font-semibold text-muted-foreground">Không tìm thấy người dùng</h2>
+                    <p className="text-muted-foreground mt-2">
+                        Người dùng bạn đang tìm kiếm không tồn tại
+                    </p>
                 </div>
             </div>
         );

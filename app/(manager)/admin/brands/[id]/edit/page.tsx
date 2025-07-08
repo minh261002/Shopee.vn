@@ -7,14 +7,14 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
-import { ArrowLeft, Tag } from 'lucide-react'
+import { Tag } from 'lucide-react'
 import Link from 'next/link'
 import { api } from '@/lib/axios'
 import { useRouter } from 'next/navigation'
 import { CloudinaryUpload } from '@/components/layouts/cloudinary-upload'
 import slugify from 'react-slugify'
 import Image from 'next/image'
-import { Skeleton } from '@/components/ui/skeleton'
+
 import { useToast } from '@/hooks/use-toast'
 
 interface Brand {
@@ -149,16 +149,8 @@ const EditBrand: React.FC<EditBrandProps> = ({ params }) => {
     if (isLoading) {
         return (
             <div className="space-y-6">
-                <Skeleton className="h-16 w-full" />
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="lg:col-span-2 space-y-6">
-                        <Skeleton className="h-[400px] w-full" />
-                        <Skeleton className="h-[300px] w-full" />
-                    </div>
-                    <div className="space-y-6">
-                        <Skeleton className="h-[200px] w-full" />
-                        <Skeleton className="h-[200px] w-full" />
-                    </div>
+                <div className="flex items-center justify-center h-64">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 </div>
             </div>
         )
@@ -170,19 +162,6 @@ const EditBrand: React.FC<EditBrandProps> = ({ params }) => {
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center gap-4">
-                <Button variant="outline" size="sm" asChild>
-                    <Link href={`/admin/brands/${params.id}`}>
-                        <ArrowLeft className="w-4 h-4 mr-2" />
-                        Quay lại
-                    </Link>
-                </Button>
-                <div className="flex items-center gap-2">
-                    <Tag className="w-5 h-5" />
-                    <h1 className="text-2xl font-bold">Chỉnh sửa thương hiệu: {originalBrand.name}</h1>
-                </div>
-            </div>
-
             <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Main Info */}
@@ -350,17 +329,23 @@ const EditBrand: React.FC<EditBrandProps> = ({ params }) => {
                                 </div>
                             </CardContent>
                         </Card>
-                    </div>
-                </div>
 
-                {/* Submit Buttons */}
-                <div className="flex justify-end gap-4">
-                    <Button type="button" variant="outline" asChild>
-                        <Link href={`/admin/brands/${params.id}`}>Hủy</Link>
-                    </Button>
-                    <Button type="submit" disabled={isSubmitting}>
-                        {isSubmitting ? 'Đang cập nhật...' : 'Cập nhật thương hiệu'}
-                    </Button>
+                        {/* Actions */}
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Thao tác</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-2">
+                                <Button type="submit" className="w-full" disabled={isSubmitting}>
+                                    <Tag className="h-4 w-4 mr-2" />
+                                    {isSubmitting ? 'Đang cập nhật...' : 'Cập nhật thương hiệu'}
+                                </Button>
+                                <Button type="button" variant="outline" className="w-full" asChild>
+                                    <Link href={`/admin/brands/${params.id}`}>Hủy</Link>
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    </div>
                 </div>
             </form>
         </div>
