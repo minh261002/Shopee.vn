@@ -3,12 +3,20 @@
 import { AppSidebar } from "@/components/layouts/app-sidebar"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { StoreProvider } from "@/providers/store-context"
+import { authClient } from "@/lib/auth-client"
+import Loading from "@/app/loading"
 
 const DashboardLayout = ({
     children,
 }: {
     children: React.ReactNode
 }) => {
+    const { isPending } = authClient.useSession();
+    if (isPending) {
+        return (
+            <Loading />
+        )
+    }
     return (
         <StoreProvider>
             <SidebarProvider>

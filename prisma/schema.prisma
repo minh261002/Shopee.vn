@@ -442,24 +442,16 @@ enum StoreType {
   INDIVIDUAL // Cá nhân
   BUSINESS // Doanh nghiệp
   CORPORATION // Công ty
-  OFFICIAL // Cửa hàng chính hãng
-}
-
-enum VerificationStatus {
-  PENDING
-  VERIFIED
-  REJECTED
-  EXPIRED
+  OFFICIAL // Cửa hàng chính thức
 }
 
 model Store {
-  id                 String             @id @default(uuid())
-  name               String
-  slug               String             @unique
-  description        String?            @db.Text
-  status             StoreStatus        @default(PENDING_APPROVAL)
-  type               StoreType          @default(INDIVIDUAL)
-  verificationStatus VerificationStatus @default(PENDING)
+  id          String      @id @default(uuid())
+  name        String
+  slug        String      @unique
+  description String?     @db.Text
+  status      StoreStatus @default(PENDING_APPROVAL)
+  type        StoreType   @default(INDIVIDUAL)
 
   // Store owner
   ownerId String
@@ -497,9 +489,8 @@ model Store {
   warrantyPolicy String? @db.Text
 
   // Operating status
-  isFeatured      Boolean @default(false)
-  isVerified      Boolean @default(false)
-  isOfficialStore Boolean @default(false)
+  isFeatured Boolean @default(false)
+  isVerified Boolean @default(false)
 
   // Social media
   facebookUrl  String? @db.Text
@@ -573,8 +564,8 @@ model StoreDocument {
   fileSize Int?
   mimeType String?
 
-  status     VerificationStatus @default(PENDING)
-  reviewNote String?            @db.Text
+  status     String    @default("PENDING") // PENDING, APPROVED, REJECTED
+  reviewNote String?   @db.Text
   reviewedBy String? // Admin ID
   reviewedAt DateTime?
 

@@ -74,7 +74,8 @@ const sessionCache = new SessionCache();
 // Route checking functions
 const getRouteChecks = (pathname: string): RouteChecks => ({
   isAdminRoute: pathname.startsWith("/admin"),
-  isSellerRoute: pathname.startsWith("/seller"),
+  isSellerRoute:
+    pathname.startsWith("/seller") && !pathname.startsWith("/seller-register"),
   isSellerRegister:
     pathname === "/seller-register" || pathname.startsWith("/seller-register/"),
 });
@@ -131,7 +132,7 @@ const fetchSession = async (
   }
 };
 
-// Authorization logic
+// Authorization logic - phân quyền rõ ràng
 const checkAuthorization = (
   role: string | undefined,
   routeChecks: RouteChecks,
@@ -142,7 +143,7 @@ const checkAuthorization = (
     return { authorized: false, redirectPath: "/login" };
   }
 
-  // Admin route access
+  // Admin route access - CHỈ ADMIN được vào
   if (routeChecks.isAdminRoute) {
     if (role !== "ADMIN") {
       console.log(
@@ -150,32 +151,40 @@ const checkAuthorization = (
       );
       return { authorized: false, redirectPath: "/unauthorized" };
     }
+    return { authorized: true };
   }
 
-  // Seller route access
+  // Seller route access - CHỈ SELLER được vào (Admin KHÔNG được vào)
   if (routeChecks.isSellerRoute) {
-    if (role !== "SELLER") {
-      console.log(
-        `[${requestId}] Seller route accessed by ${role}, unauthorized`
-      );
-      if (role === "ADMIN") {
-        console.log(
-          `[${requestId}] Admin trying to access seller route, redirecting to admin dashboard`
-        );
-        return { authorized: false, redirectPath: "/admin/dashboard" };
-      }
-      if (role === "USER") {
-        console.log(
-          `[${requestId}] User trying to access seller route, redirecting to seller-register`
-        );
-        return { authorized: false, redirectPath: "/seller-register" };
-      }
-      return { authorized: false, redirectPath: "/unauthorized" };
+    if (role === "SELLER") {
+      return { authorized: true };
     }
+
+    if (role === "ADMIN") {
+      console.log(
+        `[${requestId}] Admin trying to access seller route, redirecting to admin dashboard`
+      );
+      return { authorized: false, redirectPath: "/admin/dashboard" };
+    }
+
+    if (role === "USER") {
+      console.log(
+        `[${requestId}] User trying to access seller route, redirecting to seller-register`
+      );
+      return { authorized: false, redirectPath: "/seller-register" };
+    }
+
+    console.log(`[${requestId}] Invalid role ${role} for seller route`);
+    return { authorized: false, redirectPath: "/unauthorized" };
   }
 
-  // Seller registration page access
+  // Seller registration page access - CHỈ USER được vào
   if (routeChecks.isSellerRegister) {
+    if (role === "USER") {
+      console.log(`[${requestId}] User accessing seller register - allowed`);
+      return { authorized: true };
+    }
+
     if (role === "SELLER") {
       console.log(
         `[${requestId}] Seller accessing register page, redirecting to seller dashboard`
@@ -190,10 +199,8 @@ const checkAuthorization = (
       return { authorized: false, redirectPath: "/admin/dashboard" };
     }
 
-    if (role !== "USER") {
-      console.log(`[${requestId}] Invalid role for seller register: ${role}`);
-      return { authorized: false, redirectPath: "/unauthorized" };
-    }
+    console.log(`[${requestId}] Invalid role ${role} for seller register`);
+    return { authorized: false, redirectPath: "/unauthorized" };
   }
 
   return { authorized: true };

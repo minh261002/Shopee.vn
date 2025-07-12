@@ -1,7 +1,6 @@
 import {
   StoreStatus,
   StoreType,
-  VerificationStatus,
   DocumentType,
   ProductStatus,
   ProductCondition,
@@ -22,7 +21,6 @@ export interface StoreData {
   description?: string;
   status: "PENDING_APPROVAL" | "ACTIVE" | "SUSPENDED" | "CLOSED";
   type: "INDIVIDUAL" | "BUSINESS" | "CORPORATION" | "OFFICIAL";
-  verificationStatus: "PENDING" | "VERIFIED" | "REJECTED" | "EXPIRED";
   logo?: string;
   banner?: string;
   email?: string;
@@ -44,10 +42,8 @@ export interface StoreData {
   returnPolicy?: string;
   shippingPolicy?: string;
   warrantyPolicy?: string;
-  isActive: boolean;
   isFeatured: boolean;
   isVerified: boolean;
-  isOfficialStore: boolean;
   facebookUrl?: string;
   instagramUrl?: string;
   youtubeUrl?: string;
@@ -62,7 +58,6 @@ export interface Store {
   description?: string;
   status: StoreStatus;
   type: StoreType;
-  verificationStatus: VerificationStatus;
 
   // Store owner
   ownerId: string;
@@ -101,7 +96,6 @@ export interface Store {
   // Operating status
   isFeatured: boolean;
   isVerified: boolean;
-  isOfficialStore: boolean;
 
   // Social media
   facebookUrl?: string;
@@ -135,7 +129,7 @@ export interface StoreDocument {
   fileName: string;
   fileSize?: number;
   mimeType?: string;
-  status: VerificationStatus;
+  status: string; // PENDING, APPROVED, REJECTED
   reviewNote?: string;
   reviewedBy?: string;
   reviewedAt?: Date;

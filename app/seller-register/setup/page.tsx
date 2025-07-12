@@ -31,7 +31,6 @@ import AddressPicker from '@/components/ui/address-picker';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { motion } from 'framer-motion';
 import api from '@/lib/axios';
-import { authClient } from '@/lib/auth-client';
 import { useRouter } from 'next/navigation';
 
 interface FormData {
@@ -76,14 +75,9 @@ interface AddressData {
 }
 
 const SetupStore = () => {
-  const { data: session } = authClient.useSession();
   const router = useRouter();
   const topRef = React.useRef<HTMLDivElement>(null);
 
-  // Kiểm tra đăng nhập
-  if (!session) {
-    router.push('/login');
-  }
 
   // Middleware đã xử lý phân quyền, không cần kiểm tra role ở đây nữa
   const [currentStep, setCurrentStep] = useState(1);
@@ -255,7 +249,7 @@ const SetupStore = () => {
                     <SelectItem value="INDIVIDUAL">Cá nhân</SelectItem>
                     <SelectItem value="BUSINESS">Hộ kinh doanh</SelectItem>
                     <SelectItem value="CORPORATION">Công ty</SelectItem>
-                    <SelectItem value="OFFICIAL">Cửa hàng chính hãng</SelectItem>
+                    <SelectItem value="OFFICIAL">Cửa hàng chính thức</SelectItem>
                   </SelectContent>
                 </Select>
                 <p className="text-sm text-gray-500 mt-1">Chọn loại hình phù hợp với cửa hàng của bạn</p>

@@ -90,9 +90,7 @@ export async function POST(req: NextRequest) {
         youtubeUrl: body.youtubeUrl,
 
         // Default values
-        isActive: false, // Needs admin approval
         status: "PENDING_APPROVAL",
-        verificationStatus: "PENDING",
       },
     });
 

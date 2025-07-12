@@ -13,14 +13,13 @@ import { toast } from 'sonner'
 import { useRouter, useParams } from 'next/navigation'
 import { api } from '@/lib/axios'
 import type { StoreData } from '@/types/store'
-import { StoreStatus, StoreType, VerificationStatus } from '@prisma/client'
+import { StoreStatus, StoreType } from '@prisma/client'
 
 const initialFormData: Partial<StoreData> = {
     name: '',
     description: '',
     status: 'PENDING_APPROVAL',
     type: 'INDIVIDUAL',
-    verificationStatus: 'PENDING',
     logo: '',
     banner: '',
     email: '',
@@ -34,10 +33,8 @@ const initialFormData: Partial<StoreData> = {
     returnPolicy: '',
     shippingPolicy: '',
     warrantyPolicy: '',
-    isActive: false,
     isFeatured: false,
     isVerified: false,
-    isOfficialStore: false,
     facebookUrl: '',
     instagramUrl: '',
     youtubeUrl: '',
@@ -143,26 +140,6 @@ const EditStorePage = () => {
                                             <SelectItem value="PENDING_APPROVAL">Chờ duyệt</SelectItem>
                                             <SelectItem value="SUSPENDED">Tạm khóa</SelectItem>
                                             <SelectItem value="CLOSED">Đã đóng</SelectItem>
-
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-2">
-                                    <label htmlFor="verificationStatus" className="text-sm font-medium">
-                                        Trạng thái xác thực *
-                                    </label>
-                                    <Select
-                                        value={formData.verificationStatus}
-                                        onValueChange={(value: VerificationStatus) => setFormData({ ...formData, verificationStatus: value })}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Chọn trạng thái xác thực" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="PENDING">Chờ xác thực</SelectItem>
-                                            <SelectItem value="VERIFIED">Đã xác thực</SelectItem>
-                                            <SelectItem value="REJECTED">Từ chối</SelectItem>
-                                            <SelectItem value="EXPIRED">Hết hạn</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -323,16 +300,6 @@ const EditStorePage = () => {
                                 </div>
                                 <div className="flex items-center space-x-2">
                                     <Switch
-                                        id="isOfficialStore"
-                                        checked={formData.isOfficialStore}
-                                        onCheckedChange={(checked) => setFormData({ ...formData, isOfficialStore: checked })}
-                                    />
-                                    <label htmlFor="isOfficialStore" className="text-sm font-medium">
-                                        Cửa hàng chính hãng
-                                    </label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                    <Switch
                                         id="isFeatured"
                                         checked={formData.isFeatured}
                                         onCheckedChange={(checked) => setFormData({ ...formData, isFeatured: checked })}
@@ -349,16 +316,6 @@ const EditStorePage = () => {
                                     />
                                     <label htmlFor="isVerified" className="text-sm font-medium">
                                         Xác thực
-                                    </label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                    <Switch
-                                        id="isOfficialStore"
-                                        checked={formData.isOfficialStore}
-                                        onCheckedChange={(checked) => setFormData({ ...formData, isOfficialStore: checked })}
-                                    />
-                                    <label htmlFor="isOfficialStore" className="text-sm font-medium">
-                                        Cửa hàng chính thức
                                     </label>
                                 </div>
                             </div>

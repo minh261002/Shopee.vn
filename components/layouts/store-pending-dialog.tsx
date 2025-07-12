@@ -1,12 +1,45 @@
 'use client';
 
-import { Store } from 'lucide-react';
+import { Store, XCircle } from 'lucide-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { DialogTitle } from '@radix-ui/react-dialog';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 
-export function StorePendingDialog() {
+interface StorePendingDialogProps {
+    status?: 'PENDING_APPROVAL' | 'SUSPENDED' | 'CLOSED';
+}
+
+export function StorePendingDialog({ status = 'PENDING_APPROVAL' }: StorePendingDialogProps) {
+    const getStatusInfo = () => {
+        switch (status) {
+            case 'SUSPENDED':
+                return {
+                    title: 'Cửa hàng đã bị tạm khóa',
+                    description: 'Cửa hàng của bạn đã bị tạm khóa do vi phạm chính sách.',
+                    icon: XCircle,
+                    color: 'from-red-500 to-red-700'
+                };
+            case 'CLOSED':
+                return {
+                    title: 'Cửa hàng đã đóng',
+                    description: 'Cửa hàng của bạn đã bị đóng vĩnh viễn.',
+                    icon: XCircle,
+                    color: 'from-gray-500 to-gray-700'
+                };
+            default:
+                return {
+                    title: 'Cửa hàng đang chờ duyệt',
+                    description: 'Cửa hàng của bạn đang được đội ngũ Shopee xem xét. Vui lòng chờ trong thời gian ngắn.',
+                    icon: Store,
+                    color: 'from-[#ee4d2d] to-[#ff7337]'
+                };
+        }
+    };
+
+    const statusInfo = getStatusInfo();
+    const IconComponent = statusInfo.icon;
+
     return (
         <Dialog open={true} onOpenChange={() => { }}>
             <DialogTitle>
@@ -26,7 +59,7 @@ export function StorePendingDialog() {
                 </div>
             </DialogTitle>
             <DialogContent className="sm:max-w-md !p-0 !gap-0 overflow-hidden" showCloseButton={false}>
-                <div className="bg-gradient-to-br from-[#ee4d2d] to-[#ff7337] h-[400px] w-full relative flex flex-col items-center justify-center text-white overflow-hidden">
+                <div className={`bg-gradient-to-br ${statusInfo.color} h-[400px] w-full relative flex flex-col items-center justify-center text-white overflow-hidden`}>
                     {/* Animated Background */}
                     <div className="absolute inset-0 overflow-hidden">
                         <div className="absolute inset-0 opacity-20">
@@ -99,7 +132,7 @@ export function StorePendingDialog() {
                                         scale: { duration: 1.5, repeat: Infinity, ease: "easeInOut" }
                                     }}
                                 >
-                                    <Store className="w-16 h-16" />
+                                    <IconComponent className="w-16 h-16" />
                                 </motion.div>
 
                                 {/* Pulse Ring Effect */}
@@ -212,13 +245,15 @@ export function StorePendingDialog() {
                                 ease: "easeInOut"
                             }}
                         >
-                            <h2 className="text-2xl font-bold mb-4">Cửa hàng đang chờ duyệt</h2>
-                            <p className="text-white/90 mb-2">
-                                Cửa hàng của bạn đang được đội ngũ Shopee xem xét.
-                            </p>
+                            <h2 className="text-2xl font-bold mb-4">{statusInfo.title}</h2>
                             <p className="text-white/90">
-                                Vui lòng chờ trong thời gian ngắn. Chúng tôi sẽ thông báo ngay khi cửa hàng được duyệt.
+                                {statusInfo.description}
                             </p>
+                            {status === 'PENDING_APPROVAL' && (
+                                <p className="text-white/90 mt-2">
+                                    Chúng tôi sẽ thông báo ngay khi cửa hàng được duyệt.
+                                </p>
+                            )}
                         </motion.div>
                     </motion.div>
 

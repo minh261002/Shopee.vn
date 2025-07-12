@@ -64,19 +64,6 @@ const SellerDashboard = () => {
                                 {currentStore.status}
                             </Badge>
                         </div>
-                        <div>
-                            <p className="text-sm font-medium">Xác thực</p>
-                            <Badge
-                                variant={
-                                    currentStore.verificationStatus === 'VERIFIED' ? 'default' :
-                                        currentStore.verificationStatus === 'PENDING' ? 'secondary' :
-                                            currentStore.verificationStatus === 'REJECTED' ? 'destructive' :
-                                                'outline'
-                                }
-                            >
-                                {currentStore.verificationStatus}
-                            </Badge>
-                        </div>
                     </div>
 
                     {/* Contact Info */}
@@ -216,8 +203,8 @@ const SellerDashboard = () => {
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             <div>
                                 <p className="text-sm font-medium">Hoạt động</p>
-                                <Badge variant={currentStore.isActive ? 'default' : 'secondary'}>
-                                    {currentStore.isActive ? 'Đang hoạt động' : 'Tạm ngưng'}
+                                <Badge variant={currentStore.status === 'ACTIVE' ? 'default' : 'secondary'}>
+                                    {currentStore.status === 'ACTIVE' ? 'Đang hoạt động' : 'Tạm ngưng'}
                                 </Badge>
                             </div>
                             <div>
@@ -230,12 +217,6 @@ const SellerDashboard = () => {
                                 <p className="text-sm font-medium">Xác thực</p>
                                 <Badge variant={currentStore.isVerified ? 'default' : 'secondary'}>
                                     {currentStore.isVerified ? 'Đã xác thực' : 'Chưa xác thực'}
-                                </Badge>
-                            </div>
-                            <div>
-                                <p className="text-sm font-medium">Cửa hàng chính thức</p>
-                                <Badge variant={currentStore.isOfficialStore ? 'default' : 'secondary'}>
-                                    {currentStore.isOfficialStore ? 'Có' : 'Không'}
                                 </Badge>
                             </div>
                         </div>
