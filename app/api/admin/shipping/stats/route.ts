@@ -14,6 +14,34 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Check if we have any providers, if not create some test data
+    const providerCount = await prisma.shippingProvider.count();
+    if (providerCount === 0) {
+      // Create test providers
+      await prisma.shippingProvider.createMany({
+        data: [
+          {
+            name: "Giao Hàng Nhanh",
+            code: "GHN",
+            description: "Dịch vụ giao hàng nhanh toàn quốc",
+            isActive: true,
+          },
+          {
+            name: "Giao Hàng Tiết Kiệm",
+            code: "GHTK",
+            description: "Dịch vụ giao hàng tiết kiệm",
+            isActive: true,
+          },
+          {
+            name: "Viettel Post",
+            code: "VTP",
+            description: "Dịch vụ bưu cục Viettel",
+            isActive: true,
+          },
+        ],
+      });
+    }
+
     // Get provider stats
     const [totalProviders, activeProviders] = await Promise.all([
       prisma.shippingProvider.count(),

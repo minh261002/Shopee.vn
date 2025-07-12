@@ -15,6 +15,7 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const providerId = searchParams.get("providerId");
+    const limit = searchParams.get("limit");
 
     const shipments = await prisma.shipment.findMany({
       where: providerId ? { providerId } : undefined,
@@ -36,9 +37,25 @@ export async function GET(req: NextRequest) {
       orderBy: {
         createdAt: "desc",
       },
+      take: limit ? parseInt(limit) : undefined,
     });
 
-    return NextResponse.json(shipments);
+    // Transform data to match frontend expectations
+    const transformedShipments = shipments.map((shipment) => ({
+      id: shipment.id,
+      order: {
+        orderNumber: shipment.order.orderNumber,
+        totalAmount: shipment.order.total,
+      },
+      provider: {
+        name: shipment.provider.name,
+      },
+      status: shipment.status.toLowerCase(),
+      shippingFee: shipment.shippingFee,
+      createdAt: shipment.createdAt.toISOString(),
+    }));
+
+    return NextResponse.json(transformedShipments);
   } catch (error) {
     console.error("Error fetching shipments:", error);
     return NextResponse.json(
