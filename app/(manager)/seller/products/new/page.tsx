@@ -111,11 +111,9 @@ const NewProduct = () => {
                 const flattenedCategories = flattenCategories(categoriesRes.data);
                 setCategories(flattenedCategories);
 
-                // Fetch approved brands for current store
-                if (currentStore) {
-                    const brandsRes = await api.get(`/seller/brand-registration/approved?storeId=${currentStore.id}`)
-                    setBrands(brandsRes.data.brands);
-                }
+                // Fetch all brands
+                const brandsRes = await api.get('/seller/brands')
+                setBrands(brandsRes.data.brands || []);
             } catch (error) {
                 console.error('Error fetching data:', error)
             }

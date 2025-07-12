@@ -1,24 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { headers } from "next/headers";
 import { StoreStatus, StoreType, VerificationStatus } from "@prisma/client";
 
 export async function GET(req: NextRequest) {
   try {
-    // Get session
-    const sessionResponse = await fetch(
-      `${req.nextUrl.origin}/api/auth/session`,
-      {
-        headers: {
-          cookie: req.headers.get("cookie") || "",
-        },
-      }
-    );
-
-    if (!sessionResponse.ok) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const session = await sessionResponse.json();
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    });
 
     if (!session?.user || session.user.role !== "ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -65,12 +55,27 @@ export async function GET(req: NextRequest) {
       ...(minRating ? { rating: { gte: minRating } } : {}),
     };
 
-    // Get stores with pagination
+    // Get stores with pagination and related data
     const [stores, total] = await Promise.all([
       prisma.store.findMany({
         where,
         skip,
         take: limit,
+        include: {
+          owner: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          _count: {
+            select: {
+              products: true,
+              orders: true,
+            },
+          },
+        },
         orderBy: {
           createdAt: "desc",
         },
@@ -81,8 +86,17 @@ export async function GET(req: NextRequest) {
     // Calculate total pages
     const totalPages = Math.ceil(total / limit);
 
+    // Transform data for frontend
+    const transformedStores = stores.map((store) => ({
+      ...store,
+      totalProducts: store._count.products,
+      totalOrders: store._count.orders,
+      reviewCount: 0, // TODO: Add reviews to schema
+      totalRevenue: 0, // TODO: Calculate from orders
+    }));
+
     return NextResponse.json({
-      stores,
+      stores: transformedStores,
       pagination: {
         page,
         limit,

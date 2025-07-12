@@ -1,21 +1,22 @@
 "use client"
 
-import React, { useState, useEffect, use } from 'react'
+import React, { useState, useEffect } from 'react'
 import { ArrowLeft, Edit, Trash2, Store, Phone, Globe, MapPin, Building2, FileText, BarChart3, Star, Users, ShoppingBag, DollarSign, ImageIcon, Calendar } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
-import { useRouter } from 'next/navigation'
+import { useRouter, useParams } from 'next/navigation'
 import Image from 'next/image'
 import { api } from '@/lib/axios'
 import type { StoreData } from '@/types/store'
 import { format } from 'date-fns'
 import { vi } from 'date-fns/locale'
 
-const StoreDetailPage = ({ params }: { params: Promise<{ id: string }> }) => {
-    const { id } = use(params)
+const StoreDetailPage = () => {
+    const params = useParams()
+    const id = params.id as string
     const [store, setStore] = useState<StoreData | null>(null)
     const [isLoading, setIsLoading] = useState(true)
     const router = useRouter()

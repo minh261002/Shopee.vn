@@ -16,6 +16,10 @@ import { Store, Eye, Edit, Trash2 } from 'lucide-react'
 const StoresPage = () => {
     const [stores, setStores] = useState<StoreData[]>([])
     const [isLoading, setIsLoading] = useState(true)
+    const [searchTerm, setSearchTerm] = useState('')
+    const [statusFilter, setStatusFilter] = useState<string>('ALL')
+    const [typeFilter, setTypeFilter] = useState<string>('ALL')
+    const [verificationFilter, setVerificationFilter] = useState<string>('ALL')
     const [pagination, setPagination] = useState({
         page: 1,
         limit: 10,
@@ -25,13 +29,16 @@ const StoresPage = () => {
     const router = useRouter()
 
     // Fetch stores
-    const fetchStores = async (page = 1, search = '') => {
+    const fetchStores = async (page = 1, search = '', status = '', type = '', verification = '') => {
         try {
             setIsLoading(true)
             const params = {
                 page: page.toString(),
                 limit: '10',
                 ...(search && { search }),
+                ...(status !== 'ALL' && { status }),
+                ...(type !== 'ALL' && { type }),
+                ...(verification !== 'ALL' && { verificationStatus: verification }),
             }
 
             const response = await api.get('/admin/stores', { params })
@@ -46,8 +53,8 @@ const StoresPage = () => {
     }
 
     useEffect(() => {
-        fetchStores()
-    }, [])
+        fetchStores(1, searchTerm, statusFilter, typeFilter, verificationFilter)
+    }, [searchTerm, statusFilter, typeFilter, verificationFilter])
 
     // Handle view
     const handleView = (store: StoreData) => {
@@ -223,7 +230,59 @@ const StoresPage = () => {
                         Tổng cộng {pagination.total} cửa hàng
                     </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
+                    {/* Filters */}
+                    <div className="flex flex-col lg:flex-row items-start lg:items-center gap-4">
+                        <div className="relative flex-1 max-w-sm">
+                            <input
+                                type="text"
+                                placeholder="Tìm kiếm cửa hàng..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2">
+                            <select
+                                value={statusFilter}
+                                onChange={(e) => setStatusFilter(e.target.value)}
+                                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="ALL">Tất cả trạng thái</option>
+                                <option value="ACTIVE">Hoạt động</option>
+                                <option value="PENDING_APPROVAL">Chờ duyệt</option>
+                                <option value="SUSPENDED">Tạm khóa</option>
+                                <option value="CLOSED">Đã đóng</option>
+                                <option value="BANNED">Cấm hoạt động</option>
+                            </select>
+
+                            <select
+                                value={typeFilter}
+                                onChange={(e) => setTypeFilter(e.target.value)}
+                                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="ALL">Tất cả loại hình</option>
+                                <option value="INDIVIDUAL">Cá nhân</option>
+                                <option value="BUSINESS">Doanh nghiệp</option>
+                                <option value="CORPORATION">Tập đoàn</option>
+                                <option value="OFFICIAL">Chính thức</option>
+                            </select>
+
+                            <select
+                                value={verificationFilter}
+                                onChange={(e) => setVerificationFilter(e.target.value)}
+                                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="ALL">Tất cả xác thực</option>
+                                <option value="PENDING">Chờ xác thực</option>
+                                <option value="VERIFIED">Đã xác thực</option>
+                                <option value="REJECTED">Từ chối</option>
+                                <option value="EXPIRED">Hết hạn</option>
+                            </select>
+                        </div>
+                    </div>
+
                     <DataTable
                         columns={columns}
                         data={stores}

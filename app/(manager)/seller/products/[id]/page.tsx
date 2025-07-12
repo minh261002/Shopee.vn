@@ -23,6 +23,7 @@ import Image from 'next/image'
 import { useParams, useRouter } from 'next/navigation'
 import { api } from '@/lib/axios'
 import { useToast } from '@/hooks/use-toast'
+import { useStore } from '@/providers/store-context'
 import {
     AlertDialog,
     AlertDialogAction,
@@ -89,14 +90,20 @@ const ProductDetail = () => {
     const params = useParams()
     const router = useRouter()
     const { success, error: showError } = useToast()
+    const { currentStore } = useStore()
     const [product, setProduct] = useState<Product | null>(null)
     const [loading, setLoading] = useState(true)
     const [deleting, setDeleting] = useState(false)
 
     useEffect(() => {
         const fetchProduct = async () => {
+            if (!currentStore) {
+                setLoading(false)
+                return
+            }
+
             try {
-                const response = await api.get(`/seller/products/${params.id}`)
+                const response = await api.get(`/seller/products/${params.id}?storeId=${currentStore.id}`)
                 setProduct(response.data)
             } catch (error) {
                 console.error('Error fetching product:', error)
@@ -107,15 +114,17 @@ const ProductDetail = () => {
             }
         }
 
-        if (params.id) {
+        if (params.id && currentStore) {
             fetchProduct()
         }
-    }, [params.id, router])
+    }, [params.id, currentStore, router])
 
     const handleDelete = async () => {
+        if (!currentStore) return
+
         setDeleting(true)
         try {
-            await api.delete(`/seller/products/${params.id}`)
+            await api.delete(`/seller/products/${params.id}?storeId=${currentStore.id}`)
             success('Xóa sản phẩm thành công')
             router.push('/seller/products')
         } catch (error) {
@@ -127,11 +136,11 @@ const ProductDetail = () => {
     }
 
     const handleStatusToggle = async () => {
-        if (!product) return
+        if (!product || !currentStore) return
 
         try {
             const newStatus = product.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'
-            const response = await api.put(`/seller/products/${params.id}`, {
+            const response = await api.put(`/seller/products/${params.id}?storeId=${currentStore.id}`, {
                 status: newStatus
             })
             setProduct(response.data)

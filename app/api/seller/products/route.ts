@@ -245,25 +245,6 @@ export async function POST(req: Request) {
           { status: 400 }
         );
       }
-
-      // Check if store has approved brand registration for this brand
-      const brandRegistration = await prisma.brandRegistration.findFirst({
-        where: {
-          storeId: store.id,
-          brandId: data.brandId,
-          status: "APPROVED",
-        },
-      });
-
-      if (!brandRegistration) {
-        return NextResponse.json(
-          {
-            error:
-              "Bạn chưa được phép bán sản phẩm của thương hiệu này. Vui lòng đăng ký thương hiệu và chờ duyệt trước khi thêm sản phẩm.",
-          },
-          { status: 403 }
-        );
-      }
     }
 
     // Handle product status based on store type and selected status

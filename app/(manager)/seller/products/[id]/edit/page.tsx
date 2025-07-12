@@ -23,6 +23,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { CloudinaryMultipleUpload } from '@/components/layouts/cloudinary-upload'
 import slugify from 'react-slugify'
 import { useToast } from '@/hooks/use-toast'
+import { useStore } from '@/providers/store-context'
 
 interface ProductVariant {
     id: string
@@ -97,6 +98,7 @@ const EditProduct = () => {
     const params = useParams()
     const router = useRouter()
     const { success, error: showError } = useToast()
+    const { currentStore } = useStore()
 
     const [formData, setFormData] = useState({
         name: '',
@@ -136,9 +138,14 @@ const EditProduct = () => {
 
     useEffect(() => {
         const fetchData = async () => {
+            if (!currentStore) {
+                setLoading(false)
+                return
+            }
+
             try {
                 const [productRes, categoriesRes] = await Promise.all([
-                    api.get(`/seller/products/${params.id}`),
+                    api.get(`/seller/products/${params.id}?storeId=${currentStore.id}`),
                     api.get('/seller/categories'),
                 ])
 
@@ -189,10 +196,10 @@ const EditProduct = () => {
             }
         }
 
-        if (params.id) {
+        if (params.id && currentStore) {
             fetchData()
         }
-    }, [params.id])
+    }, [params.id, currentStore])
 
 
     const handleInputChange = (field: string, value: string | boolean) => {
@@ -249,6 +256,11 @@ const EditProduct = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
+        if (!currentStore) {
+            showError('Vui lòng chọn cửa hàng')
+            return
+        }
+
         setIsSubmitting(true)
 
         try {
@@ -275,7 +287,7 @@ const EditProduct = () => {
                 specifications: formData.specifications ? { description: formData.specifications } : undefined,
             }
 
-            await api.put(`/seller/products/${params.id}`, productData)
+            await api.put(`/seller/products/${params.id}?storeId=${currentStore.id}`, productData)
 
             success('Sản phẩm đã được cập nhật thành công!')
             router.push(`/seller/products/${params.id}`)

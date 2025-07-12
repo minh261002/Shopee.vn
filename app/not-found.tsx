@@ -40,7 +40,6 @@ const NotFound = () => {
                             Quay lại
                         </Button>
                     </Link>
-
                 </div>
 
                 {/* Help Text */}

@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, use } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Save } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,7 +10,7 @@ import { Switch } from '@/components/ui/switch'
 import { CloudinaryUpload } from '@/components/layouts/cloudinary-upload'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
-import { useRouter } from 'next/navigation'
+import { useRouter, useParams } from 'next/navigation'
 import { api } from '@/lib/axios'
 import type { StoreData } from '@/types/store'
 import { StoreStatus, StoreType, VerificationStatus } from '@prisma/client'
@@ -43,8 +43,9 @@ const initialFormData: Partial<StoreData> = {
     youtubeUrl: '',
 }
 
-const EditStorePage = ({ params }: { params: Promise<{ id: string }> }) => {
-    const { id } = use(params)
+const EditStorePage = () => {
+    const params = useParams()
+    const id = params.id as string
     const [isLoading, setIsLoading] = useState(false)
     const router = useRouter()
 

@@ -524,7 +524,6 @@ model Store {
   affiliateLinks     AffiliateLink[]
   inventoryLocations InventoryLocation[]
   behaviors          UserBehavior[]
-  BrandRegistration  BrandRegistration[]
 
   @@index([ownerId])
   @@index([status])
@@ -721,89 +720,11 @@ model Brand {
   updatedAt DateTime @updatedAt
 
   // Relations
-  products           Product[]
-  brandRegistrations BrandRegistration[]
+  products Product[]
 
   @@index([isActive])
   @@index([isFeatured])
   @@map("brands")
-}
-
-// Brand Registration for Shopee Mall
-enum BrandRegistrationType {
-  BRAND_OWNER // Đăng ký thương hiệu chính chủ
-  DISTRIBUTOR // Đăng ký phân phối thương hiệu
-  SHOPEE_MALL // Đăng ký vào Shopee Mall
-}
-
-enum BrandRegistrationStatus {
-  PENDING // Chờ duyệt
-  UNDER_REVIEW // Đang xem xét
-  APPROVED // Đã duyệt
-  REJECTED // Từ chối
-  RESUBMISSION // Yêu cầu nộp lại
-}
-
-model BrandRegistration {
-  id     String                  @id @default(uuid())
-  type   BrandRegistrationType
-  status BrandRegistrationStatus @default(PENDING)
-
-  // Store information
-  storeId String
-  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
-
-  // Brand information
-  brandId   String?
-  brand     Brand?  @relation(fields: [brandId], references: [id], onDelete: SetNull)
-  brandName String // Tên thương hiệu muốn đăng ký
-
-  // Registration details
-  description String? @db.Text // Mô tả về thương hiệu
-
-  // Business documents
-  businessLicense      String? @db.Text // Giấy phép kinh doanh
-  trademarkCertificate String? @db.Text // Giấy chứng nhận đăng ký nhãn hiệu
-  distributionContract String? @db.Text // Hợp đồng phân phối (cho DISTRIBUTOR)
-  authorizationLetter  String? @db.Text // Giấy ủy quyền
-
-  // Additional documents
-  supportingDocuments String? @db.Text // JSON array of additional document URLs
-
-  // Company information
-  companyName    String?
-  companyAddress String? @db.Text
-  taxCode        String?
-  legalRepName   String? // Tên người đại diện pháp luật
-  legalRepPhone  String?
-  legalRepEmail  String?
-
-  // Quality requirements for Shopee Mall
-  qualityStandards String? @db.Text // JSON object for quality standards
-  returnPolicy     String? @db.Text // Chính sách đổi trả 7 ngày
-  authenticity     Boolean @default(false) // Cam kết hàng chính hãng 100%
-
-  // Review process
-  reviewerId      String? // Admin reviewer ID
-  reviewNotes     String?   @db.Text
-  reviewedAt      DateTime?
-  rejectionReason String?   @db.Text
-
-  // Submission tracking
-  submittedAt   DateTime?
-  resubmittedAt DateTime?
-  approvedAt    DateTime?
-  rejectedAt    DateTime?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([storeId])
-  @@index([brandId])
-  @@index([status])
-  @@index([type])
-  @@index([submittedAt])
-  @@map("brand_registrations")
 }
 
 // Product Images

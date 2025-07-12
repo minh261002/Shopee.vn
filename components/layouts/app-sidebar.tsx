@@ -14,8 +14,6 @@ import {
   BarChart3,
   Settings,
   Star,
-  Tag,
-  Award,
   Bell,
   HelpCircle,
   Truck,
@@ -63,21 +61,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         title: "Cửa hàng",
         url: "/admin/stores",
         icon: Store,
-      },
-      {
-        title: "Thương hiệu",
-        url: "/admin/brands",
-        icon: Tag,
-        items: [
-          {
-            title: "Danh sách",
-            url: "/admin/brands",
-          },
-          {
-            title: "Thêm mới",
-            url: "/admin/brands/new",
-          },
-        ]
       },
       {
         title: "Danh mục ",
@@ -136,21 +119,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           {
             title: "Thêm mới",
             url: "/admin/users/new",
-          },
-        ]
-      },
-      {
-        title: "Đăng ký thương hiệu",
-        url: "/admin/brand-registrations",
-        icon: Award,
-        items: [
-          {
-            title: "Danh sách",
-            url: "/admin/brand-registrations",
-          },
-          {
-            title: "Chờ duyệt",
-            url: "/admin/brand-registrations?status=PENDING",
           },
         ]
       },
@@ -265,11 +233,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             url: "/seller/products/new",
           },
         ]
-      },
-      {
-        title: "Đăng ký thương hiệu",
-        url: "/seller/brand-registration",
-        icon: Award,
       },
       {
         title: "Đơn hàng",

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { headers } from "next/headers";
 
 // GET - Lấy thông tin cửa hàng theo ID
 export async function GET(
@@ -7,30 +9,34 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    // Get session
-    const sessionResponse = await fetch(
-      `${req.nextUrl.origin}/api/auth/session`,
-      {
-        headers: {
-          cookie: req.headers.get("cookie") || "",
-        },
-      }
-    );
-
-    if (!sessionResponse.ok) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const session = await sessionResponse.json();
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    });
 
     if (!session?.user || session.user.role !== "ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get store
+    // Get store with related data
     const store = await prisma.store.findUnique({
       where: {
         id: params.id,
+      },
+      include: {
+        owner: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+          },
+        },
+        _count: {
+          select: {
+            products: true,
+            orders: true,
+          },
+        },
       },
     });
 
@@ -38,7 +44,16 @@ export async function GET(
       return NextResponse.json({ error: "Store not found" }, { status: 404 });
     }
 
-    return NextResponse.json(store);
+    // Transform data for frontend
+    const transformedStore = {
+      ...store,
+      totalProducts: store._count.products,
+      totalOrders: store._count.orders,
+      reviewCount: 0, // TODO: Add reviews to schema
+      totalRevenue: 0, // TODO: Calculate from orders
+    };
+
+    return NextResponse.json(transformedStore);
   } catch (error) {
     console.error("Get store error:", error);
     return NextResponse.json(
@@ -54,21 +69,9 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    // Get session
-    const sessionResponse = await fetch(
-      `${req.nextUrl.origin}/api/auth/session`,
-      {
-        headers: {
-          cookie: req.headers.get("cookie") || "",
-        },
-      }
-    );
-
-    if (!sessionResponse.ok) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const session = await sessionResponse.json();
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    });
 
     if (!session?.user || session.user.role !== "ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -138,21 +141,9 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    // Get session
-    const sessionResponse = await fetch(
-      `${req.nextUrl.origin}/api/auth/session`,
-      {
-        headers: {
-          cookie: req.headers.get("cookie") || "",
-        },
-      }
-    );
-
-    if (!sessionResponse.ok) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const session = await sessionResponse.json();
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    });
 
     if (!session?.user || session.user.role !== "ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

@@ -18,13 +18,29 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Lấy store của seller
+    const { searchParams } = new URL(request.url);
+    const storeId = searchParams.get("storeId");
+
+    if (!storeId) {
+      return NextResponse.json(
+        { error: "storeId is required" },
+        { status: 400 }
+      );
+    }
+
+    // Kiểm tra store có thuộc về seller này không
     const store = await prisma.store.findFirst({
-      where: { ownerId: session.user.id },
+      where: {
+        id: storeId,
+        ownerId: session.user.id,
+      },
     });
 
     if (!store) {
-      return NextResponse.json({ error: "Store not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Store not found or unauthorized" },
+        { status: 404 }
+      );
     }
 
     const product = await prisma.product.findFirst({
@@ -110,13 +126,29 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Lấy store của seller
+    const { searchParams } = new URL(request.url);
+    const storeId = searchParams.get("storeId");
+
+    if (!storeId) {
+      return NextResponse.json(
+        { error: "storeId is required" },
+        { status: 400 }
+      );
+    }
+
+    // Kiểm tra store có thuộc về seller này không
     const store = await prisma.store.findFirst({
-      where: { ownerId: session.user.id },
+      where: {
+        id: storeId,
+        ownerId: session.user.id,
+      },
     });
 
     if (!store) {
-      return NextResponse.json({ error: "Store not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Store not found or unauthorized" },
+        { status: 404 }
+      );
     }
 
     // Kiểm tra sản phẩm tồn tại và thuộc store này
@@ -339,13 +371,29 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Lấy store của seller
+    const { searchParams } = new URL(request.url);
+    const storeId = searchParams.get("storeId");
+
+    if (!storeId) {
+      return NextResponse.json(
+        { error: "storeId is required" },
+        { status: 400 }
+      );
+    }
+
+    // Kiểm tra store có thuộc về seller này không
     const store = await prisma.store.findFirst({
-      where: { ownerId: session.user.id },
+      where: {
+        id: storeId,
+        ownerId: session.user.id,
+      },
     });
 
     if (!store) {
-      return NextResponse.json({ error: "Store not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Store not found or unauthorized" },
+        { status: 404 }
+      );
     }
 
     // Kiểm tra sản phẩm tồn tại và thuộc store này

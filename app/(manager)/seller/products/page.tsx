@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { DataTable } from '@/components/dataTables/data-table'
-import { Package, Plus, Search, Edit, Trash2, Eye, MoreHorizontal } from 'lucide-react'
+import { Package, Plus, Search, Edit, Trash2, Eye, MoreHorizontal, Download } from 'lucide-react'
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -34,6 +34,8 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 // Local type matching our API response
 interface Product {
@@ -59,6 +61,12 @@ const ProductsList = () => {
     const [products, setProducts] = useState<Product[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [searchTerm, setSearchTerm] = useState('')
+    const [selectedProducts, setSelectedProducts] = useState<string[]>([])
+    const [isBulkDeleting, setIsBulkDeleting] = useState(false)
+    const [statusFilter, setStatusFilter] = useState<ProductStatus | 'ALL'>('ALL')
+    const [stockFilter, setStockFilter] = useState<'ALL' | 'IN_STOCK' | 'OUT_OF_STOCK' | 'LOW_STOCK'>('ALL')
+    const [sortBy, setSortBy] = useState<'name' | 'price' | 'stock' | 'updatedAt'>('updatedAt')
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
     const { currentStore } = useStore()
 
     useEffect(() => {
@@ -84,13 +92,93 @@ const ProductsList = () => {
 
     const handleDelete = async (productId: string) => {
         try {
-            await api.delete(`/seller/products/${productId}`)
+            await api.delete(`/seller/products/${productId}?storeId=${currentStore?.id}`)
             setProducts(products.filter(product => product.id !== productId))
             success('Xóa sản phẩm thành công')
         } catch (error) {
             console.error('Error deleting product:', error)
             showError('Có lỗi xảy ra khi xóa sản phẩm')
         }
+    }
+
+    const handleBulkDelete = async () => {
+        if (selectedProducts.length === 0) return
+
+        setIsBulkDeleting(true)
+        try {
+            await Promise.all(
+                selectedProducts.map(id =>
+                    api.delete(`/seller/products/${id}?storeId=${currentStore?.id}`)
+                )
+            )
+            setProducts(products.filter(product => !selectedProducts.includes(product.id)))
+            setSelectedProducts([])
+            success(`Đã xóa ${selectedProducts.length} sản phẩm thành công`)
+        } catch (error) {
+            console.error('Error bulk deleting products:', error)
+            showError('Có lỗi xảy ra khi xóa sản phẩm')
+        } finally {
+            setIsBulkDeleting(false)
+        }
+    }
+
+    const handleSelectAll = () => {
+        if (selectedProducts.length === filteredProducts.length) {
+            setSelectedProducts([])
+        } else {
+            setSelectedProducts(filteredProducts.map(p => p.id))
+        }
+    }
+
+    const handleSelectProduct = (productId: string) => {
+        setSelectedProducts(prev =>
+            prev.includes(productId)
+                ? prev.filter(id => id !== productId)
+                : [...prev, productId]
+        )
+    }
+
+    const resetFilters = () => {
+        setSearchTerm('')
+        setStatusFilter('ALL')
+        setStockFilter('ALL')
+        setSortBy('updatedAt')
+        setSortOrder('desc')
+        setSelectedProducts([])
+    }
+
+    const handleExportCSV = () => {
+        const headers = [
+            'ID', 'Tên sản phẩm', 'SKU', 'Giá gốc', 'Giá khuyến mãi',
+            'Tồn kho', 'Đã bán', 'Trạng thái', 'Danh mục', 'Cập nhật'
+        ]
+
+        const csvData = filteredProducts.map(product => [
+            product.id,
+            product.name,
+            product.sku || '',
+            product.originalPrice,
+            product.salePrice || '',
+            product.stock,
+            product.purchaseCount,
+            getStatusText(product.status),
+            product.category?.name || '',
+            format(new Date(product.updatedAt), 'dd/MM/yyyy', { locale: vi })
+        ])
+
+        const csvContent = [headers, ...csvData]
+            .map(row => row.map(cell => `"${cell}"`).join(','))
+            .join('\n')
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+        const link = document.createElement('a')
+        const url = URL.createObjectURL(blob)
+        link.setAttribute('href', url)
+        link.setAttribute('download', `products-${format(new Date(), 'yyyy-MM-dd')}.csv`)
+        link.style.visibility = 'hidden'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
     }
 
     const getStatusColor = (status: ProductStatus) => {
@@ -136,6 +224,25 @@ const ProductsList = () => {
     }
 
     const columns: ColumnDef<Product>[] = [
+        {
+            id: 'select',
+            header: () => (
+                <Checkbox
+                    checked={selectedProducts.length === filteredProducts.length}
+                    onCheckedChange={handleSelectAll}
+                    aria-label="Select all"
+                />
+            ),
+            cell: ({ row }) => (
+                <Checkbox
+                    checked={selectedProducts.includes(row.original.id)}
+                    onCheckedChange={() => handleSelectProduct(row.original.id)}
+                    aria-label="Select row"
+                />
+            ),
+            enableSorting: false,
+            enableHiding: false,
+        },
         {
             accessorKey: 'image',
             header: 'Hình ảnh',
@@ -291,11 +398,50 @@ const ProductsList = () => {
         },
     ]
 
-    const filteredProducts = products.filter(product =>
-        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.category?.name.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    const filteredProducts = products
+        .filter(product => {
+            const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                product.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                product.category?.name.toLowerCase().includes(searchTerm.toLowerCase())
+
+            const matchesStatus = statusFilter === 'ALL' || product.status === statusFilter
+
+            const matchesStock = stockFilter === 'ALL' ||
+                (stockFilter === 'IN_STOCK' && product.stock > 0) ||
+                (stockFilter === 'OUT_OF_STOCK' && product.stock === 0) ||
+                (stockFilter === 'LOW_STOCK' && product.stock > 0 && product.stock <= 10)
+
+            return matchesSearch && matchesStatus && matchesStock
+        })
+        .sort((a, b) => {
+            let aValue: number | string | Date, bValue: number | string | Date
+
+            switch (sortBy) {
+                case 'name':
+                    aValue = a.name.toLowerCase()
+                    bValue = b.name.toLowerCase()
+                    break
+                case 'price':
+                    aValue = a.originalPrice
+                    bValue = b.originalPrice
+                    break
+                case 'stock':
+                    aValue = a.stock
+                    bValue = b.stock
+                    break
+                case 'updatedAt':
+                default:
+                    aValue = new Date(a.updatedAt)
+                    bValue = new Date(b.updatedAt)
+                    break
+            }
+
+            if (sortOrder === 'asc') {
+                return aValue > bValue ? 1 : -1
+            } else {
+                return aValue < bValue ? 1 : -1
+            }
+        })
 
     if (isLoading) {
         return (
@@ -326,7 +472,7 @@ const ProductsList = () => {
                 </CardHeader>
                 <CardContent className="space-y-4">
                     {/* Search */}
-                    <div className="flex items-center gap-4">
+                    <div className="flex flex-col lg:flex-row items-start lg:items-center gap-4">
                         <div className="relative flex-1 max-w-sm">
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                             <Input
@@ -336,7 +482,111 @@ const ProductsList = () => {
                                 className="pl-10"
                             />
                         </div>
+
+                        <div className="flex flex-wrap items-center gap-2">
+                            {/* Status Filter */}
+                            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as ProductStatus | 'ALL')}>
+                                <SelectTrigger className="w-48">
+                                    <SelectValue placeholder="Lọc theo trạng thái" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="ALL">Tất cả trạng thái</SelectItem>
+                                    <SelectItem value="ACTIVE">Đang bán</SelectItem>
+                                    <SelectItem value="DRAFT">Bản nháp</SelectItem>
+                                    <SelectItem value="PENDING_APPROVAL">Chờ duyệt</SelectItem>
+                                    <SelectItem value="INACTIVE">Không hoạt động</SelectItem>
+                                    <SelectItem value="OUT_OF_STOCK">Hết hàng</SelectItem>
+                                    <SelectItem value="DISCONTINUED">Ngừng bán</SelectItem>
+                                    <SelectItem value="REJECTED">Bị từ chối</SelectItem>
+                                </SelectContent>
+                            </Select>
+
+                            {/* Stock Filter */}
+                            <Select value={stockFilter} onValueChange={(value) => setStockFilter(value as 'ALL' | 'IN_STOCK' | 'OUT_OF_STOCK' | 'LOW_STOCK')}>
+                                <SelectTrigger className="w-48">
+                                    <SelectValue placeholder="Lọc theo tồn kho" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="ALL">Tất cả tồn kho</SelectItem>
+                                    <SelectItem value="IN_STOCK">Còn hàng</SelectItem>
+                                    <SelectItem value="OUT_OF_STOCK">Hết hàng</SelectItem>
+                                    <SelectItem value="LOW_STOCK">Tồn kho thấp</SelectItem>
+                                </SelectContent>
+                            </Select>
+
+                            {/* Sort Options */}
+                            <div className="flex items-center gap-2">
+                                <Select value={sortBy} onValueChange={(value) => setSortBy(value as typeof sortBy)}>
+                                    <SelectTrigger className="w-40">
+                                        <SelectValue placeholder="Sắp xếp theo" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="updatedAt">Ngày cập nhật</SelectItem>
+                                        <SelectItem value="name">Tên sản phẩm</SelectItem>
+                                        <SelectItem value="price">Giá</SelectItem>
+                                        <SelectItem value="stock">Tồn kho</SelectItem>
+                                    </SelectContent>
+                                </Select>
+
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                                >
+                                    {sortOrder === 'asc' ? '↑' : '↓'}
+                                </Button>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            {selectedProducts.length > 0 && (
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="destructive" disabled={isBulkDeleting}>
+                                            {isBulkDeleting ? 'Đang xóa...' : `Xóa ${selectedProducts.length} sản phẩm`}
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Xác nhận xóa sản phẩm</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                Bạn có chắc chắn muốn xóa {selectedProducts.length} sản phẩm đã chọn?
+                                                Hành động này không thể hoàn tác.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Hủy</AlertDialogCancel>
+                                            <AlertDialogAction
+                                                onClick={handleBulkDelete}
+                                                className="bg-red-600 hover:bg-red-700"
+                                            >
+                                                Xóa sản phẩm
+                                            </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            )}
+
+                            <Button variant="outline" onClick={handleExportCSV}>
+                                <Download className="w-4 h-4 mr-2" />
+                                Xuất CSV
+                            </Button>
+
+                            {/* Reset Filters */}
+                            {(searchTerm || statusFilter !== 'ALL' || stockFilter !== 'ALL' || sortBy !== 'updatedAt' || sortOrder !== 'desc') && (
+                                <Button variant="ghost" onClick={resetFilters} size="sm">
+                                    Xóa bộ lọc
+                                </Button>
+                            )}
+                        </div>
                     </div>
+
+                    {/* Filter Results Info */}
+                    {(searchTerm || statusFilter !== 'ALL' || stockFilter !== 'ALL') && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <span>Hiển thị {filteredProducts.length} trong tổng số {products.length} sản phẩm</span>
+                        </div>
+                    )}
 
                     {/* Stats */}
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
