@@ -3,11 +3,12 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { headers } from "next/headers";
 
+interface RouteParams {
+  params: Promise<{ id: string }>;
+}
+
 // GET - Lấy thông tin banner theo ID
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await auth.api.getSession({
       headers: await headers(),
@@ -17,8 +18,10 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
+
     const banner = await prisma.contentBlock.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         items: {
           orderBy: {
@@ -55,10 +58,7 @@ export async function GET(
 }
 
 // PUT - Cập nhật banner
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await auth.api.getSession({
       headers: await headers(),
@@ -68,6 +68,7 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
     const body = await request.json();
     const {
       title,
@@ -105,7 +106,7 @@ export async function PUT(
 
     // Kiểm tra banner tồn tại
     const existingBanner = await prisma.contentBlock.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!existingBanner) {
@@ -128,7 +129,7 @@ export async function PUT(
 
     // Cập nhật banner
     const updatedBanner = await prisma.contentBlock.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         title,
         description,
@@ -182,7 +183,7 @@ export async function PUT(
     if (items.length > 0) {
       // Xóa items cũ
       await prisma.contentItem.deleteMany({
-        where: { contentBlockId: params.id },
+        where: { contentBlockId: id },
       });
 
       // Tạo items mới
@@ -198,17 +199,13 @@ export async function PUT(
               linkUrl?: string;
               linkText?: string;
               openInNewTab?: boolean;
-              productId?: string;
-              categoryId?: string;
-              brandId?: string;
-              order?: number;
-              metadata?: string;
+              order: number;
             },
             index: number
           ) =>
             prisma.contentItem.create({
               data: {
-                contentBlockId: params.id,
+                contentBlockId: id,
                 title: item.title,
                 subtitle: item.subtitle,
                 description: item.description,
@@ -216,12 +213,8 @@ export async function PUT(
                 imageAlt: item.imageAlt,
                 linkUrl: item.linkUrl,
                 linkText: item.linkText,
-                openInNewTab: item.openInNewTab || false,
-                productId: item.productId,
-                categoryId: item.categoryId,
-                brandId: item.brandId,
+                openInNewTab: item.openInNewTab,
                 order: item.order || index,
-                metadata: item.metadata,
               },
             })
         )
@@ -239,10 +232,7 @@ export async function PUT(
 }
 
 // DELETE - Xóa banner
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await auth.api.getSession({
       headers: await headers(),
@@ -252,18 +242,20 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
+
     // Kiểm tra banner tồn tại
-    const existingBanner = await prisma.contentBlock.findUnique({
-      where: { id: params.id },
+    const banner = await prisma.contentBlock.findUnique({
+      where: { id },
     });
 
-    if (!existingBanner) {
+    if (!banner) {
       return NextResponse.json({ error: "Banner not found" }, { status: 404 });
     }
 
-    // Xóa banner (items sẽ tự động xóa do cascade)
+    // Xóa banner và các items liên quan
     await prisma.contentBlock.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ message: "Banner deleted successfully" });

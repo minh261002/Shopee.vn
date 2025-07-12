@@ -1,62 +1,68 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { DataTable } from '@/components/dataTables/data-table'
-import { DataTableRowActions } from '@/components/dataTables/data-table-row-actions'
-import { ColumnDef } from '@tanstack/react-table'
-import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { useRouter } from 'next/navigation'
+import { Badge } from '@/components/ui/badge'
+import { DataTable } from '@/components/dataTables/data-table'
+import { DataTableColumnHeader } from '@/components/dataTables/data-table-column-header'
+import { DataTableRowActions } from '@/components/dataTables/data-table-row-actions'
 import { toast } from 'sonner'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { api } from '@/lib/axios'
-import { Plus, Search, Edit, Trash2, Eye } from 'lucide-react'
+import { Plus, Truck, Search, Filter, Download, Package } from 'lucide-react'
 import Link from 'next/link'
+import { ColumnDef } from '@tanstack/react-table'
 
 interface Shipment {
     id: string
     orderId: string
-    providerId: string
-    method: string
     status: string
     trackingNumber?: string
-    providerOrderId?: string
-    pickupAddress: string
-    deliveryAddress: string
-    weight?: number
     shippingFee: number
-    totalFee: number
     createdAt: string
     updatedAt: string
+    order: {
+        orderNumber: string
+        totalAmount: number
+        customer: {
+            name: string
+            email: string
+        }
+    }
     provider: {
         id: string
         name: string
         code: string
     }
-    order: {
+    rate: {
         id: string
-        orderNumber: string
-        totalAmount: number
-        status: string
+        name: string
+        method: string
     }
 }
 
 const ShipmentsPage = () => {
+    const router = useRouter()
+    const searchParams = useSearchParams()
     const [shipments, setShipments] = useState<Shipment[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [searchTerm, setSearchTerm] = useState('')
-    const router = useRouter()
+    const [statusFilter, setStatusFilter] = useState<string>('all')
 
-    // Fetch shipments
     const fetchShipments = async () => {
         try {
             setIsLoading(true)
-            const response = await api.get('/admin/shipping/shipments')
-            setShipments(response.data.shipments || [])
+            const params = new URLSearchParams()
+            if (searchParams.get('providerId')) {
+                params.append('providerId', searchParams.get('providerId')!)
+            }
+            const response = await api.get(`/admin/shipping/shipments?${params.toString()}`)
+            setShipments(response.data)
         } catch (error) {
             console.error('Error fetching shipments:', error)
-            toast.error('Không thể tải danh sách đơn hàng vận chuyển')
+            toast.error('Không thể tải danh sách đơn hàng')
         } finally {
             setIsLoading(false)
         }
@@ -64,149 +70,153 @@ const ShipmentsPage = () => {
 
     useEffect(() => {
         fetchShipments()
-    }, [])
+    }, [searchParams])
 
-    // Handle view
-    const handleView = (shipment: Shipment) => {
-        router.push(`/admin/shipping/shipments/${shipment.id}`)
-    }
-
-    // Handle edit
-    const handleEdit = (shipment: Shipment) => {
-        router.push(`/admin/shipping/shipments/${shipment.id}/edit`)
-    }
-
-    // Handle delete
-    const handleDelete = async (shipment: Shipment) => {
+    const handleDelete = async (id: string) => {
         try {
-            await api.delete(`/admin/shipping/shipments/${shipment.id}`)
-            toast.success('Xóa đơn hàng vận chuyển thành công')
+            await api.delete(`/admin/shipping/shipments/${id}`)
+            toast.success('Xóa đơn hàng thành công')
             fetchShipments()
         } catch (error) {
             console.error('Error deleting shipment:', error)
-            toast.error('Có lỗi xảy ra khi xóa đơn hàng vận chuyển')
+            toast.error('Có lỗi xảy ra khi xóa đơn hàng')
         }
     }
 
-    // Get status badge variant
-    const getStatusBadge = (status: string) => {
-        const statusMap: Record<string, { variant: "default" | "secondary" | "destructive" | "outline", label: string }> = {
-            'PENDING': { variant: 'secondary', label: 'Chờ xử lý' },
-            'CONFIRMED': { variant: 'outline', label: 'Đã xác nhận' },
-            'PICKED_UP': { variant: 'default', label: 'Đã lấy hàng' },
-            'IN_TRANSIT': { variant: 'default', label: 'Đang vận chuyển' },
-            'OUT_FOR_DELIVERY': { variant: 'default', label: 'Đang giao hàng' },
-            'DELIVERED': { variant: 'default', label: 'Đã giao hàng' },
-            'FAILED_DELIVERY': { variant: 'destructive', label: 'Giao hàng thất bại' },
-            'RETURNED_TO_SENDER': { variant: 'destructive', label: 'Đã trả về' },
+    const handleUpdateStatus = async (id: string, status: string) => {
+        try {
+            await api.put(`/admin/shipping/shipments/${id}`, { status })
+            toast.success('Cập nhật trạng thái thành công')
+            fetchShipments()
+        } catch (error) {
+            console.error('Error updating shipment status:', error)
+            toast.error('Có lỗi xảy ra khi cập nhật trạng thái')
         }
-        return statusMap[status] || { variant: 'secondary', label: status }
     }
+
+    const filteredShipments = shipments.filter(shipment => {
+        const matchesSearch = shipment.order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            shipment.trackingNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            shipment.order.customer.name.toLowerCase().includes(searchTerm.toLowerCase())
+        const matchesStatus = statusFilter === 'all' || shipment.status === statusFilter
+        return matchesSearch && matchesStatus
+    })
 
     const columns: ColumnDef<Shipment>[] = [
         {
-            accessorKey: "order.orderNumber",
-            header: "Mã đơn hàng",
-            cell: ({ row }) => {
-                const orderNumber = row.original.order.orderNumber
-                return (
-                    <div>
-                        <p className="font-medium">{orderNumber}</p>
-                        <p className="text-sm text-muted-foreground">#{row.original.orderId}</p>
+            accessorKey: 'order',
+            header: ({ column }) => (
+                <DataTableColumnHeader column={column} title="Đơn hàng" />
+            ),
+            cell: ({ row }) => (
+                <div>
+                    <div className="font-medium">{row.original.order.orderNumber}</div>
+                    <div className="text-sm text-muted-foreground">
+                        {row.original.order.customer.name}
                     </div>
-                )
-            },
+                </div>
+            ),
         },
         {
-            accessorKey: "provider.name",
-            header: "Nhà vận chuyển",
-            cell: ({ row }) => {
-                const shipment = row.original
-                return (
-                    <div>
-                        <p className="font-medium">{shipment.provider.name}</p>
-                        <p className="text-sm text-muted-foreground">{shipment.provider.code}</p>
+            accessorKey: 'provider',
+            header: ({ column }) => (
+                <DataTableColumnHeader column={column} title="Nhà vận chuyển" />
+            ),
+            cell: ({ row }) => (
+                <div>
+                    <div className="font-medium">{row.original.provider.name}</div>
+                    <div className="text-sm text-muted-foreground">
+                        {row.original.rate.method}
                     </div>
+                </div>
+            ),
+        },
+        {
+            accessorKey: 'trackingNumber',
+            header: ({ column }) => (
+                <DataTableColumnHeader column={column} title="Mã vận đơn" />
+            ),
+            cell: ({ row }) => (
+                <div>
+                    {row.original.trackingNumber ? (
+                        <Badge variant="outline">{row.original.trackingNumber}</Badge>
+                    ) : (
+                        <span className="text-muted-foreground">Chưa có</span>
+                    )}
+                </div>
+            ),
+        },
+        {
+            accessorKey: 'shippingFee',
+            header: ({ column }) => (
+                <DataTableColumnHeader column={column} title="Phí vận chuyển" />
+            ),
+            cell: ({ row }) => (
+                <div className="text-right">
+                    <div className="font-medium">
+                        {row.original.shippingFee.toLocaleString('vi-VN')}đ
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                        Tổng: {row.original.order.totalAmount.toLocaleString('vi-VN')}đ
+                    </div>
+                </div>
+            ),
+        },
+        {
+            accessorKey: 'status',
+            header: ({ column }) => (
+                <DataTableColumnHeader column={column} title="Trạng thái" />
+            ),
+            cell: ({ row }) => {
+                const statusColors = {
+                    'pending': 'secondary',
+                    'processing': 'default',
+                    'shipped': 'default',
+                    'delivered': 'default',
+                    'cancelled': 'destructive',
+                    'returned': 'destructive',
+                } as const
+                return (
+                    <Badge variant={statusColors[row.original.status as keyof typeof statusColors] || 'secondary'}>
+                        {row.original.status}
+                    </Badge>
                 )
             },
         },
         {
-            accessorKey: "method",
-            header: "Phương thức",
-            cell: ({ row }) => {
-                const method = row.getValue("method") as string
-                return <Badge variant="outline">{method}</Badge>
-            },
+            accessorKey: 'createdAt',
+            header: ({ column }) => (
+                <DataTableColumnHeader column={column} title="Ngày tạo" />
+            ),
+            cell: ({ row }) => (
+                <div className="text-sm text-muted-foreground">
+                    {new Date(row.original.createdAt).toLocaleDateString('vi-VN')}
+                </div>
+            ),
         },
         {
-            accessorKey: "status",
-            header: "Trạng thái",
-            cell: ({ row }) => {
-                const status = row.getValue("status") as string
-                const { variant, label } = getStatusBadge(status)
-                return <Badge variant={variant}>{label}</Badge>
-            },
-        },
-        {
-            accessorKey: "trackingNumber",
-            header: "Mã vận đơn",
-            cell: ({ row }) => {
-                const trackingNumber = row.getValue("trackingNumber") as string
-                return trackingNumber ? (
-                    <span className="font-mono text-sm">{trackingNumber}</span>
-                ) : (
-                    <span className="text-muted-foreground text-sm">Chưa có</span>
-                )
-            },
-        },
-        {
-            accessorKey: "shippingFee",
-            header: "Phí vận chuyển",
-            cell: ({ row }) => {
-                const fee = row.getValue("shippingFee") as number
-                return <span>{fee.toLocaleString('vi-VN')}đ</span>
-            },
-        },
-        {
-            accessorKey: "weight",
-            header: "Cân nặng",
-            cell: ({ row }) => {
-                const weight = row.getValue("weight") as number
-                return weight ? <span>{weight}kg</span> : <span className="text-muted-foreground">-</span>
-            },
-        },
-        {
-            accessorKey: "createdAt",
-            header: "Ngày tạo",
-            cell: ({ row }) => {
-                const date = new Date(row.getValue("createdAt") as string)
-                return <span>{date.toLocaleDateString('vi-VN')}</span>
-            },
-        },
-        {
-            id: "actions",
+            id: 'actions',
             cell: ({ row }) => (
                 <DataTableRowActions
                     row={row}
                     actions={[
                         {
-                            label: "Xem chi tiết",
-                            onClick: handleView,
-                            icon: Eye,
+                            label: 'Xem chi tiết',
+                            onClick: () => router.push(`/admin/shipping/shipments/${row.original.id}`),
                         },
                         {
-                            label: "Chỉnh sửa",
-                            onClick: handleEdit,
-                            icon: Edit,
+                            label: 'Cập nhật trạng thái',
+                            onClick: () => {
+                                const newStatus = prompt('Nhập trạng thái mới (pending, processing, shipped, delivered, cancelled, returned):')
+                                if (newStatus) {
+                                    handleUpdateStatus(row.original.id, newStatus)
+                                }
+                            },
                         },
                         {
-                            label: "Xóa",
-                            onClick: handleDelete,
-                            icon: Trash2,
-                            variant: "destructive",
-                            separator: true,
-                            confirmTitle: "Xác nhận xóa đơn hàng vận chuyển",
-                            confirmMessage: `Bạn có chắc chắn muốn xóa đơn hàng vận chuyển này? Hành động này không thể hoàn tác.`,
+                            label: 'Xóa',
+                            onClick: () => handleDelete(row.original.id),
+                            variant: 'destructive',
                         },
                     ]}
                 />
@@ -214,80 +224,179 @@ const ShipmentsPage = () => {
         },
     ]
 
-    const filteredShipments = shipments.filter(shipment =>
-        shipment.order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        shipment.provider.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        shipment.trackingNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        shipment.deliveryAddress.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    const exportToCSV = () => {
+        const headers = ['Mã đơn hàng', 'Khách hàng', 'Nhà vận chuyển', 'Mã vận đơn', 'Phí vận chuyển', 'Tổng tiền', 'Trạng thái', 'Ngày tạo']
+        const csvData = filteredShipments.map(shipment => [
+            shipment.order.orderNumber,
+            shipment.order.customer.name,
+            shipment.provider.name,
+            shipment.trackingNumber || '',
+            shipment.shippingFee,
+            shipment.order.totalAmount,
+            shipment.status,
+            new Date(shipment.createdAt).toLocaleDateString('vi-VN')
+        ])
 
-    // Calculate stats
-    const totalShipments = shipments.length
-    const deliveredShipments = shipments.filter(s => s.status === 'DELIVERED').length
-    const inTransitShipments = shipments.filter(s => ['IN_TRANSIT', 'OUT_FOR_DELIVERY'].includes(s.status)).length
-    const totalRevenue = shipments.reduce((sum, s) => sum + s.shippingFee, 0)
+        const csvContent = [headers, ...csvData]
+            .map(row => row.map(cell => `"${cell}"`).join(','))
+            .join('\n')
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+        const link = document.createElement('a')
+        const url = URL.createObjectURL(blob)
+        link.setAttribute('href', url)
+        link.setAttribute('download', 'shipments.csv')
+        link.style.visibility = 'hidden'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+    }
+
+    const getStatusStats = () => {
+        const stats = {
+            total: shipments.length,
+            pending: shipments.filter(s => s.status === 'pending').length,
+            processing: shipments.filter(s => s.status === 'processing').length,
+            shipped: shipments.filter(s => s.status === 'shipped').length,
+            delivered: shipments.filter(s => s.status === 'delivered').length,
+            cancelled: shipments.filter(s => s.status === 'cancelled').length,
+        }
+        return stats
+    }
+
+    const stats = getStatusStats()
 
     return (
         <div className="space-y-6">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight">Đơn hàng vận chuyển</h1>
+                    <p className="text-muted-foreground">
+                        Quản lý đơn hàng vận chuyển của hệ thống
+                    </p>
+                </div>
+                <Button asChild>
+                    <Link href="/admin/shipping/shipments/new">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Tạo đơn hàng
+                    </Link>
+                </Button>
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Tổng đơn hàng</CardTitle>
+                        <Truck className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{stats.total}</div>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Chờ xử lý</CardTitle>
+                        <Package className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{stats.pending}</div>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Đang xử lý</CardTitle>
+                        <Package className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{stats.processing}</div>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Đã gửi</CardTitle>
+                        <Package className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{stats.shipped}</div>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Đã giao</CardTitle>
+                        <Package className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{stats.delivered}</div>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Đã hủy</CardTitle>
+                        <Package className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{stats.cancelled}</div>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Filters */}
             <Card>
                 <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <CardTitle>Quản lý đơn hàng vận chuyển</CardTitle>
-                            <CardDescription>
-                                Tổng cộng {totalShipments} đơn hàng vận chuyển
-                            </CardDescription>
+                    <CardTitle>Bộ lọc</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex flex-col sm:flex-row gap-4">
+                        <div className="flex-1">
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                    placeholder="Tìm kiếm theo mã đơn hàng, mã vận đơn, khách hàng..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="pl-10"
+                                />
+                            </div>
                         </div>
-                        <Button asChild>
-                            <Link href="/admin/shipping/shipments/new">
-                                <Plus className="w-4 h-4 mr-2" />
-                                Tạo đơn vận chuyển
-                            </Link>
+                        <div className="flex items-center gap-2">
+                            <Filter className="h-4 w-4 text-muted-foreground" />
+                            <select
+                                value={statusFilter}
+                                onChange={(e) => setStatusFilter(e.target.value)}
+                                className="px-3 py-2 border rounded-md text-sm"
+                            >
+                                <option value="all">Tất cả trạng thái</option>
+                                <option value="pending">Chờ xử lý</option>
+                                <option value="processing">Đang xử lý</option>
+                                <option value="shipped">Đã gửi</option>
+                                <option value="delivered">Đã giao</option>
+                                <option value="cancelled">Đã hủy</option>
+                                <option value="returned">Đã trả</option>
+                            </select>
+                        </div>
+                        <Button variant="outline" onClick={exportToCSV}>
+                            <Download className="h-4 w-4 mr-2" />
+                            Xuất CSV
                         </Button>
                     </div>
+                </CardContent>
+            </Card>
+
+            {/* Data Table */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>Danh sách đơn hàng</CardTitle>
+                    <CardDescription>
+                        {filteredShipments.length} đơn hàng được tìm thấy
+                    </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                    {/* Search */}
-                    <div className="flex items-center gap-4">
-                        <div className="relative flex-1 max-w-sm">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                            <Input
-                                placeholder="Tìm kiếm đơn hàng..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-10"
-                            />
-                        </div>
-                    </div>
-
-                    {/* Stats */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div className="p-4 bg-blue-50 rounded-lg">
-                            <p className="text-sm font-medium text-blue-600">Tổng đơn hàng</p>
-                            <p className="text-2xl font-bold text-blue-600">{totalShipments}</p>
-                        </div>
-                        <div className="p-4 bg-green-50 rounded-lg">
-                            <p className="text-sm font-medium text-green-600">Đã giao hàng</p>
-                            <p className="text-2xl font-bold text-green-600">{deliveredShipments}</p>
-                        </div>
-                        <div className="p-4 bg-yellow-50 rounded-lg">
-                            <p className="text-sm font-medium text-yellow-600">Đang vận chuyển</p>
-                            <p className="text-2xl font-bold text-yellow-600">{inTransitShipments}</p>
-                        </div>
-                        <div className="p-4 bg-purple-50 rounded-lg">
-                            <p className="text-sm font-medium text-purple-600">Doanh thu</p>
-                            <p className="text-2xl font-bold text-purple-600">
-                                {totalRevenue.toLocaleString('vi-VN')}đ
-                            </p>
-                        </div>
-                    </div>
-
+                <CardContent>
                     <DataTable
                         columns={columns}
                         data={filteredShipments}
-                        searchPlaceholder="Tìm kiếm đơn hàng..."
                         isLoading={isLoading}
-                        emptyMessage="Không có đơn hàng vận chuyển nào."
                     />
                 </CardContent>
             </Card>

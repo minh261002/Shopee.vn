@@ -126,7 +126,8 @@ const StoresPage = () => {
                             status === 'ACTIVE' ? 'default' :
                                 status === 'PENDING_APPROVAL' ? 'secondary' :
                                     status === 'SUSPENDED' ? 'destructive' :
-                                        'outline'
+                                        status === 'CLOSED' ? 'outline' :
+                                            'secondary'
                         }
                     >
                         {status}
@@ -254,7 +255,7 @@ const StoresPage = () => {
                                 <option value="PENDING_APPROVAL">Chờ duyệt</option>
                                 <option value="SUSPENDED">Tạm khóa</option>
                                 <option value="CLOSED">Đã đóng</option>
-                                <option value="BANNED">Cấm hoạt động</option>
+
                             </select>
 
                             <select

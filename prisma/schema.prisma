@@ -436,7 +436,6 @@ enum StoreStatus {
   ACTIVE
   SUSPENDED
   CLOSED
-  BANNED
 }
 
 enum StoreType {
@@ -498,7 +497,6 @@ model Store {
   warrantyPolicy String? @db.Text
 
   // Operating status
-  isActive        Boolean @default(true)
   isFeatured      Boolean @default(false)
   isVerified      Boolean @default(false)
   isOfficialStore Boolean @default(false)
@@ -529,7 +527,6 @@ model Store {
   @@index([status])
   @@index([type])
   @@index([rating])
-  @@index([isActive])
   @@index([isFeatured])
   @@index([isVerified])
   @@map("stores")

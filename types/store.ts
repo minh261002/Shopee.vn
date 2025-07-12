@@ -20,7 +20,7 @@ export interface StoreData {
   name: string;
   slug: string;
   description?: string;
-  status: "PENDING_APPROVAL" | "ACTIVE" | "SUSPENDED" | "CLOSED" | "BANNED";
+  status: "PENDING_APPROVAL" | "ACTIVE" | "SUSPENDED" | "CLOSED";
   type: "INDIVIDUAL" | "BUSINESS" | "CORPORATION" | "OFFICIAL";
   verificationStatus: "PENDING" | "VERIFIED" | "REJECTED" | "EXPIRED";
   logo?: string;
@@ -99,7 +99,6 @@ export interface Store {
   warrantyPolicy?: string;
 
   // Operating status
-  isActive: boolean;
   isFeatured: boolean;
   isVerified: boolean;
   isOfficialStore: boolean;

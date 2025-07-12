@@ -115,7 +115,7 @@ export async function PUT(
         returnPolicy: body.returnPolicy,
         shippingPolicy: body.shippingPolicy,
         warrantyPolicy: body.warrantyPolicy,
-        isActive: body.isActive,
+
         isFeatured: body.isFeatured,
         isVerified: body.isVerified,
         isOfficialStore: body.isOfficialStore,

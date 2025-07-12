@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { CloudinaryUpload } from '@/components/layouts/cloudinary-upload'
 import { toast } from 'sonner'
-import { useRouter } from 'next/navigation'
+import { useRouter, useParams } from 'next/navigation'
 import { api } from '@/lib/axios'
 import { ArrowLeft, Save } from 'lucide-react'
 
@@ -25,9 +25,11 @@ interface ProviderFormData {
     isActive: boolean
 }
 
-const NewProviderPage = () => {
+const EditProviderPage = () => {
     const router = useRouter()
+    const params = useParams()
     const [isLoading, setIsLoading] = useState(false)
+    const [isFetching, setIsFetching] = useState(true)
     const [formData, setFormData] = useState<ProviderFormData>({
         name: '',
         code: '',
@@ -40,6 +42,37 @@ const NewProviderPage = () => {
         isActive: true,
     })
 
+    // Fetch provider data
+    const fetchProvider = async () => {
+        try {
+            setIsFetching(true)
+            const response = await api.get(`/admin/shipping/providers/${params.id}`)
+            const provider = response.data
+            setFormData({
+                name: provider.name,
+                code: provider.code,
+                description: provider.description || '',
+                logo: provider.logo || '',
+                website: provider.website || '',
+                apiKey: provider.apiKey || '',
+                apiSecret: provider.apiSecret || '',
+                apiUrl: provider.apiUrl || '',
+                isActive: provider.isActive,
+            })
+        } catch (error) {
+            console.error('Error fetching provider:', error)
+            toast.error('Không thể tải thông tin nhà vận chuyển')
+        } finally {
+            setIsFetching(false)
+        }
+    }
+
+    useEffect(() => {
+        if (params.id) {
+            fetchProvider()
+        }
+    }, [params.id])
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setIsLoading(true)
@@ -51,12 +84,12 @@ const NewProviderPage = () => {
                 return
             }
 
-            const response = await api.post('/admin/shipping/providers', formData)
-            toast.success('Tạo nhà vận chuyển thành công')
-            router.push(`/admin/shipping/providers/${response.data.id}`)
+            await api.put(`/admin/shipping/providers/${params.id}`, formData)
+            toast.success('Cập nhật nhà vận chuyển thành công')
+            router.push(`/admin/shipping/providers/${params.id}`)
         } catch (error) {
-            console.error('Error creating provider:', error)
-            const message = error instanceof Error ? error.message : 'Có lỗi xảy ra khi tạo nhà vận chuyển'
+            console.error('Error updating provider:', error)
+            const message = error instanceof Error ? error.message : 'Có lỗi xảy ra khi cập nhật nhà vận chuyển'
             toast.error(message)
         } finally {
             setIsLoading(false)
@@ -68,6 +101,17 @@ const NewProviderPage = () => {
             ...prev,
             [field]: value
         }))
+    }
+
+    if (isFetching) {
+        return (
+            <div className="space-y-6">
+                <div className="animate-pulse">
+                    <div className="h-8 bg-muted rounded w-1/3 mb-4"></div>
+                    <div className="h-96 bg-muted rounded"></div>
+                </div>
+            </div>
+        )
     }
 
     return (
@@ -89,9 +133,9 @@ const NewProviderPage = () => {
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Tạo nhà vận chuyển mới</CardTitle>
+                    <CardTitle>Chỉnh sửa nhà vận chuyển</CardTitle>
                     <CardDescription>
-                        Thêm nhà vận chuyển mới vào hệ thống
+                        Cập nhật thông tin nhà vận chuyển
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -215,7 +259,7 @@ const NewProviderPage = () => {
                         <div className="flex items-center gap-4">
                             <Button type="submit" disabled={isLoading}>
                                 <Save className="w-4 h-4 mr-2" />
-                                {isLoading ? 'Đang tạo...' : 'Tạo nhà vận chuyển'}
+                                {isLoading ? 'Đang cập nhật...' : 'Cập nhật nhà vận chuyển'}
                             </Button>
                             <Button type="button" variant="outline" onClick={() => router.back()}>
                                 Hủy
@@ -228,4 +272,4 @@ const NewProviderPage = () => {
     )
 }
 
-export default NewProviderPage 
+export default EditProviderPage 

@@ -128,12 +128,20 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         icon: Truck,
         items: [
           {
+            title: "Tổng quan",
+            url: "/admin/shipping",
+          },
+          {
             title: "Nhà vận chuyển",
             url: "/admin/shipping/providers",
           },
           {
             title: "Biểu giá",
             url: "/admin/shipping/rates",
+          },
+          {
+            title: "Đơn hàng",
+            url: "/admin/shipping/shipments",
           },
         ]
       },

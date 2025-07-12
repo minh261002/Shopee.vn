@@ -353,8 +353,16 @@ const StoreDetailPage = () => {
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             <div>
                                 <p className="text-sm font-medium">Hoạt động</p>
-                                <Badge variant={store.isActive ? 'default' : 'secondary'}>
-                                    {store.isActive ? 'Đang hoạt động' : 'Tạm ngưng'}
+                                <Badge variant={
+                                    store.status === 'ACTIVE' ? 'default' :
+                                        store.status === 'PENDING_APPROVAL' ? 'secondary' :
+                                            store.status === 'SUSPENDED' ? 'destructive' :
+                                                'outline'
+                                }>
+                                    {store.status === 'ACTIVE' ? 'Đang hoạt động' :
+                                        store.status === 'PENDING_APPROVAL' ? 'Chờ duyệt' :
+                                            store.status === 'SUSPENDED' ? 'Tạm khóa' :
+                                                'Đã đóng'}
                                 </Badge>
                             </div>
                             <div>

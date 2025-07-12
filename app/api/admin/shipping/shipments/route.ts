@@ -2,65 +2,34 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { headers } from "next/headers";
-import { Prisma, ShippingStatus, ShippingMethod } from "@prisma/client";
 
-// GET - Lấy danh sách đơn hàng vận chuyển
-export async function GET(request: NextRequest) {
+// GET /api/admin/shipping/shipments
+export async function GET(req: NextRequest) {
   try {
     const session = await auth.api.getSession({
       headers: await headers(),
     });
-
-    if (!session?.user || session.user.role !== "ADMIN") {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { searchParams } = new URL(request.url);
-    const search = searchParams.get("search") || "";
+    const { searchParams } = new URL(req.url);
     const providerId = searchParams.get("providerId");
-    const status = searchParams.get("status");
-    const method = searchParams.get("method");
 
-    // Build where conditions
-    const where: Prisma.ShipmentWhereInput = {};
-
-    if (search) {
-      where.OR = [
-        { order: { orderNumber: { contains: search } } },
-        { provider: { name: { contains: search } } },
-        { trackingNumber: { contains: search } },
-        { deliveryAddress: { contains: search } },
-      ];
-    }
-
-    if (providerId) {
-      where.providerId = providerId;
-    }
-
-    if (status) {
-      where.status = status as ShippingStatus;
-    }
-
-    if (method) {
-      where.method = method as ShippingMethod;
-    }
-
-    // Get shipments with related data
     const shipments = await prisma.shipment.findMany({
-      where,
+      where: providerId ? { providerId } : undefined,
       include: {
+        order: {
+          select: {
+            orderNumber: true,
+            total: true,
+          },
+        },
         provider: {
           select: {
             id: true,
             name: true,
             code: true,
-          },
-        },
-        order: {
-          select: {
-            id: true,
-            orderNumber: true,
-            status: true,
           },
         },
       },
@@ -69,7 +38,7 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({ shipments });
+    return NextResponse.json(shipments);
   } catch (error) {
     console.error("Error fetching shipments:", error);
     return NextResponse.json(
@@ -79,43 +48,31 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Tạo đơn hàng vận chuyển mới
-export async function POST(request: NextRequest) {
+// POST /api/admin/shipping/shipments
+export async function POST(req: NextRequest) {
   try {
     const session = await auth.api.getSession({
       headers: await headers(),
     });
-
-    if (!session?.user || session.user.role !== "ADMIN") {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await request.json();
-    const {
-      orderId,
-      providerId,
-      method,
-      pickupAddress,
-      deliveryAddress,
-      weight,
-      shippingFee,
-      codFee,
-      insuranceFee,
-      specialInstructions,
-      deliveryNote,
-    } = body;
+    const body = await req.json();
+    const { orderId, providerId, method, trackingNumber, shippingFee, status } =
+      body;
 
     // Validation
-    if (
-      !orderId ||
-      !providerId ||
-      !method ||
-      !pickupAddress ||
-      !deliveryAddress ||
-      !shippingFee
-    ) {
+    if (!orderId || !providerId || !method) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "OrderId, providerId, and method are required" },
+        { status: 400 }
+      );
+    }
+
+    if (shippingFee < 0) {
+      return NextResponse.json(
+        { error: "Shipping fee cannot be negative" },
         { status: 400 }
       );
     }
@@ -126,7 +83,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!order) {
-      return NextResponse.json({ error: "Order not found" }, { status: 400 });
+      return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
     // Check if provider exists
@@ -137,43 +94,38 @@ export async function POST(request: NextRequest) {
     if (!provider) {
       return NextResponse.json(
         { error: "Provider not found" },
-        { status: 400 }
+        { status: 404 }
       );
     }
-
-    // Check if shipment already exists for this order
-    const existingShipment = await prisma.shipment.findUnique({
-      where: { orderId },
-    });
-
-    if (existingShipment) {
-      return NextResponse.json(
-        { error: "Shipment already exists for this order" },
-        { status: 400 }
-      );
-    }
-
-    // Calculate total fee
-    const totalFee = shippingFee + (codFee || 0) + (insuranceFee || 0);
-
-    // Create shipment
     const shipment = await prisma.shipment.create({
       data: {
-        orderId,
-        providerId,
         method,
-        status: "PENDING",
-        pickupAddress,
-        deliveryAddress,
-        weight: weight ? parseFloat(weight) : null,
-        shippingFee: parseFloat(shippingFee),
-        codFee: codFee ? parseFloat(codFee) : null,
-        insuranceFee: insuranceFee ? parseFloat(insuranceFee) : null,
-        totalFee,
-        specialInstructions,
-        deliveryNote,
+        status: status || "PENDING",
+        trackingNumber,
+        shippingFee: shippingFee || 0,
+        totalFee: order.total,
+        pickupAddress: order.shippingAddress,
+        deliveryAddress: order.shippingAddress,
+        pickupPhone: order.shippingPhone,
+        deliveryPhone: order.shippingPhone,
+        order: {
+          connect: {
+            id: orderId,
+          },
+        },
+        provider: {
+          connect: {
+            id: providerId,
+          },
+        },
       },
       include: {
+        order: {
+          select: {
+            orderNumber: true,
+            total: true,
+          },
+        },
         provider: {
           select: {
             id: true,
@@ -181,17 +133,10 @@ export async function POST(request: NextRequest) {
             code: true,
           },
         },
-        order: {
-          select: {
-            id: true,
-            orderNumber: true,
-            status: true,
-          },
-        },
       },
     });
 
-    return NextResponse.json(shipment);
+    return NextResponse.json(shipment, { status: 201 });
   } catch (error) {
     console.error("Error creating shipment:", error);
     return NextResponse.json(

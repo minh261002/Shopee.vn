@@ -7,7 +7,7 @@ interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
-// GET /api/admin/shipping/providers/[id]
+// GET /api/admin/shipping/shipments/[id]
 export async function GET(req: NextRequest, { params }: RouteParams) {
   try {
     const session = await auth.api.getSession({
@@ -20,58 +20,35 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 
     const { id } = await params;
 
-    const provider = await prisma.shippingProvider.findUnique({
+    const shipment = await prisma.shipment.findUnique({
       where: { id },
       include: {
-        _count: {
+        order: {
           select: {
-            shippingRates: true,
-            shipments: true,
+            orderNumber: true,
+            total: true,
           },
         },
-        shippingRates: {
+        provider: {
           select: {
             id: true,
             name: true,
-            method: true,
-            basePrice: true,
-            perKgPrice: true,
-            estimatedDays: true,
-            isActive: true,
-          },
-        },
-        shipments: {
-          take: 5,
-          orderBy: {
-            createdAt: "desc",
-          },
-          select: {
-            id: true,
-            orderId: true,
-            status: true,
-            trackingNumber: true,
-            shippingFee: true,
-            createdAt: true,
-            order: {
-              select: {
-                orderNumber: true,
-              },
-            },
+            code: true,
           },
         },
       },
     });
 
-    if (!provider) {
+    if (!shipment) {
       return NextResponse.json(
-        { error: "Provider not found" },
+        { error: "Shipment not found" },
         { status: 404 }
       );
     }
 
-    return NextResponse.json(provider);
+    return NextResponse.json(shipment);
   } catch (error) {
-    console.error("Error fetching provider:", error);
+    console.error("Error fetching shipment:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -79,7 +56,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
   }
 }
 
-// PUT /api/admin/shipping/providers/[id]
+// PUT /api/admin/shipping/shipments/[id]
 export async function PUT(req: NextRequest, { params }: RouteParams) {
   try {
     const session = await auth.api.getSession({
@@ -93,14 +70,29 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
     const { id } = await params;
     const body = await req.json();
 
-    const provider = await prisma.shippingProvider.update({
+    const shipment = await prisma.shipment.update({
       where: { id },
       data: body,
+      include: {
+        order: {
+          select: {
+            orderNumber: true,
+            total: true,
+          },
+        },
+        provider: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+          },
+        },
+      },
     });
 
-    return NextResponse.json(provider);
+    return NextResponse.json(shipment);
   } catch (error) {
-    console.error("Error updating provider:", error);
+    console.error("Error updating shipment:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -108,7 +100,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
   }
 }
 
-// DELETE /api/admin/shipping/providers/[id]
+// DELETE /api/admin/shipping/shipments/[id]
 export async function DELETE(req: NextRequest, { params }: RouteParams) {
   try {
     const session = await auth.api.getSession({
@@ -121,13 +113,13 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
 
     const { id } = await params;
 
-    await prisma.shippingProvider.delete({
+    await prisma.shipment.delete({
       where: { id },
     });
 
-    return NextResponse.json({ message: "Provider deleted successfully" });
+    return NextResponse.json({ message: "Shipment deleted successfully" });
   } catch (error) {
-    console.error("Error deleting provider:", error);
+    console.error("Error deleting shipment:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

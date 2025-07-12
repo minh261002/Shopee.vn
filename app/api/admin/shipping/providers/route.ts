@@ -2,41 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { headers } from "next/headers";
-import { Prisma } from "@prisma/client";
 
-// GET - Lấy danh sách nhà vận chuyển
-export async function GET(request: NextRequest) {
+// GET /api/admin/shipping/providers
+export async function GET() {
   try {
     const session = await auth.api.getSession({
       headers: await headers(),
     });
 
-    if (!session?.user || session.user.role !== "ADMIN") {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { searchParams } = new URL(request.url);
-    const search = searchParams.get("search") || "";
-    const isActive = searchParams.get("isActive");
-
-    // Build where conditions
-    const where: Prisma.ShippingProviderWhereInput = {};
-
-    if (search) {
-      where.OR = [
-        { name: { contains: search } },
-        { code: { contains: search } },
-        { description: { contains: search } },
-      ];
-    }
-
-    if (isActive !== null) {
-      where.isActive = isActive === "true";
-    }
-
-    // Get providers with counts
     const providers = await prisma.shippingProvider.findMany({
-      where,
       include: {
         _count: {
           select: {
@@ -46,11 +24,11 @@ export async function GET(request: NextRequest) {
         },
       },
       orderBy: {
-        name: "asc",
+        createdAt: "desc",
       },
     });
 
-    return NextResponse.json({ providers });
+    return NextResponse.json(providers);
   } catch (error) {
     console.error("Error fetching shipping providers:", error);
     return NextResponse.json(
@@ -60,18 +38,18 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Tạo nhà vận chuyển mới
-export async function POST(request: NextRequest) {
+// POST /api/admin/shipping/providers
+export async function POST(req: NextRequest) {
   try {
     const session = await auth.api.getSession({
       headers: await headers(),
     });
 
-    if (!session?.user || session.user.role !== "ADMIN") {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await request.json();
+    const body = await req.json();
     const {
       name,
       code,
@@ -81,6 +59,7 @@ export async function POST(request: NextRequest) {
       apiKey,
       apiSecret,
       apiUrl,
+      isActive,
     } = body;
 
     // Validation
@@ -103,22 +82,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create provider
     const provider = await prisma.shippingProvider.create({
       data: {
         name,
-        code,
+        code: code.toUpperCase(),
         description,
         logo,
         website,
         apiKey,
         apiSecret,
         apiUrl,
-        isActive: true,
+        isActive: isActive ?? true,
       },
     });
 
-    return NextResponse.json(provider);
+    return NextResponse.json(provider, { status: 201 });
   } catch (error) {
     console.error("Error creating shipping provider:", error);
     return NextResponse.json(

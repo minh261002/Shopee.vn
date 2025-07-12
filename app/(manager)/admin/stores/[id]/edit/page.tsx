@@ -143,7 +143,7 @@ const EditStorePage = () => {
                                             <SelectItem value="PENDING_APPROVAL">Chờ duyệt</SelectItem>
                                             <SelectItem value="SUSPENDED">Tạm khóa</SelectItem>
                                             <SelectItem value="CLOSED">Đã đóng</SelectItem>
-                                            <SelectItem value="BANNED">Cấm hoạt động</SelectItem>
+
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -307,18 +307,28 @@ const EditStorePage = () => {
                             </div>
                         </div>
 
-                        {/* Store Status */}
+                        {/* Store Features */}
                         <div className="space-y-4">
-                            <h3 className="text-lg font-medium">Trạng thái hoạt động</h3>
+                            <h3 className="text-lg font-medium">Tính năng cửa hàng</h3>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                 <div className="flex items-center space-x-2">
                                     <Switch
-                                        id="isActive"
-                                        checked={formData.isActive}
-                                        onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
+                                        id="isVerified"
+                                        checked={formData.isVerified}
+                                        onCheckedChange={(checked) => setFormData({ ...formData, isVerified: checked })}
                                     />
-                                    <label htmlFor="isActive" className="text-sm font-medium">
-                                        Hoạt động
+                                    <label htmlFor="isVerified" className="text-sm font-medium">
+                                        Đã xác thực
+                                    </label>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                    <Switch
+                                        id="isOfficialStore"
+                                        checked={formData.isOfficialStore}
+                                        onCheckedChange={(checked) => setFormData({ ...formData, isOfficialStore: checked })}
+                                    />
+                                    <label htmlFor="isOfficialStore" className="text-sm font-medium">
+                                        Cửa hàng chính hãng
                                     </label>
                                 </div>
                                 <div className="flex items-center space-x-2">

@@ -7,7 +7,7 @@ interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
-// GET /api/admin/shipping/providers/[id]
+// GET /api/admin/shipping/rates/[id]
 export async function GET(req: NextRequest, { params }: RouteParams) {
   try {
     const session = await auth.api.getSession({
@@ -20,58 +20,26 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 
     const { id } = await params;
 
-    const provider = await prisma.shippingProvider.findUnique({
+    const rate = await prisma.shippingRate.findUnique({
       where: { id },
       include: {
-        _count: {
-          select: {
-            shippingRates: true,
-            shipments: true,
-          },
-        },
-        shippingRates: {
+        provider: {
           select: {
             id: true,
             name: true,
-            method: true,
-            basePrice: true,
-            perKgPrice: true,
-            estimatedDays: true,
-            isActive: true,
-          },
-        },
-        shipments: {
-          take: 5,
-          orderBy: {
-            createdAt: "desc",
-          },
-          select: {
-            id: true,
-            orderId: true,
-            status: true,
-            trackingNumber: true,
-            shippingFee: true,
-            createdAt: true,
-            order: {
-              select: {
-                orderNumber: true,
-              },
-            },
+            code: true,
           },
         },
       },
     });
 
-    if (!provider) {
-      return NextResponse.json(
-        { error: "Provider not found" },
-        { status: 404 }
-      );
+    if (!rate) {
+      return NextResponse.json({ error: "Rate not found" }, { status: 404 });
     }
 
-    return NextResponse.json(provider);
+    return NextResponse.json(rate);
   } catch (error) {
-    console.error("Error fetching provider:", error);
+    console.error("Error fetching rate:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -79,7 +47,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
   }
 }
 
-// PUT /api/admin/shipping/providers/[id]
+// PUT /api/admin/shipping/rates/[id]
 export async function PUT(req: NextRequest, { params }: RouteParams) {
   try {
     const session = await auth.api.getSession({
@@ -93,14 +61,23 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
     const { id } = await params;
     const body = await req.json();
 
-    const provider = await prisma.shippingProvider.update({
+    const rate = await prisma.shippingRate.update({
       where: { id },
       data: body,
+      include: {
+        provider: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+          },
+        },
+      },
     });
 
-    return NextResponse.json(provider);
+    return NextResponse.json(rate);
   } catch (error) {
-    console.error("Error updating provider:", error);
+    console.error("Error updating rate:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -108,7 +85,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
   }
 }
 
-// DELETE /api/admin/shipping/providers/[id]
+// DELETE /api/admin/shipping/rates/[id]
 export async function DELETE(req: NextRequest, { params }: RouteParams) {
   try {
     const session = await auth.api.getSession({
@@ -121,13 +98,13 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
 
     const { id } = await params;
 
-    await prisma.shippingProvider.delete({
+    await prisma.shippingRate.delete({
       where: { id },
     });
 
-    return NextResponse.json({ message: "Provider deleted successfully" });
+    return NextResponse.json({ message: "Rate deleted successfully" });
   } catch (error) {
-    console.error("Error deleting provider:", error);
+    console.error("Error deleting rate:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

@@ -6,7 +6,18 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import { api } from '@/lib/axios'
-import { Truck, Package, DollarSign, Clock, CheckCircle, AlertCircle } from 'lucide-react'
+import {
+    Truck,
+    Package,
+    DollarSign,
+    TrendingUp,
+    TrendingDown,
+    Clock,
+    CheckCircle,
+    XCircle,
+    Plus,
+    BarChart3
+} from 'lucide-react'
 import Link from 'next/link'
 
 interface ShippingStats {
@@ -15,98 +26,108 @@ interface ShippingStats {
     totalRates: number
     activeRates: number
     totalShipments: number
-    deliveredShipments: number
-    inTransitShipments: number
     pendingShipments: number
+    processingShipments: number
+    shippedShipments: number
+    deliveredShipments: number
+    cancelledShipments: number
     totalRevenue: number
     monthlyRevenue: number
-    recentShipments: Array<{
-        id: string
-        orderId: string
-        status: string
-        provider: {
-            name: string
-            code: string
-        }
-        order: {
-            orderNumber: string
-        }
-        createdAt: string
-    }>
-    topProviders: Array<{
-        id: string
+    revenueChange: number
+}
+
+interface RecentShipment {
+    id: string
+    order: {
+        orderNumber: string
+        totalAmount: number
+    }
+    provider: {
         name: string
-        code: string
-        shipmentCount: number
-        revenue: number
-    }>
+    }
+    status: string
+    shippingFee: number
+    createdAt: string
+}
+
+interface TopProvider {
+    id: string
+    name: string
+    code: string
+    shipmentCount: number
+    revenue: number
 }
 
 const ShippingDashboardPage = () => {
     const [stats, setStats] = useState<ShippingStats | null>(null)
+    const [recentShipments, setRecentShipments] = useState<RecentShipment[]>([])
+    const [topProviders, setTopProviders] = useState<TopProvider[]>([])
     const [isLoading, setIsLoading] = useState(true)
 
-    // Fetch shipping stats
-    const fetchStats = async () => {
+    const fetchDashboardData = async () => {
         try {
             setIsLoading(true)
-            const response = await api.get('/admin/shipping/stats')
-            setStats(response.data)
+            const [statsRes, shipmentsRes, providersRes] = await Promise.all([
+                api.get('/admin/shipping/stats'),
+                api.get('/admin/shipping/shipments?limit=5'),
+                api.get('/admin/shipping/providers/top')
+            ])
+
+            setStats(statsRes.data)
+            setRecentShipments(shipmentsRes.data)
+            setTopProviders(providersRes.data)
         } catch (error) {
-            console.error('Error fetching shipping stats:', error)
-            toast.error('Không thể tải thống kê vận chuyển')
+            console.error('Error fetching dashboard data:', error)
+            toast.error('Không thể tải dữ liệu dashboard')
         } finally {
             setIsLoading(false)
         }
     }
 
     useEffect(() => {
-        fetchStats()
+        fetchDashboardData()
     }, [])
 
-    const getStatusBadge = (status: string) => {
-        const statusMap: Record<string, { variant: "default" | "secondary" | "destructive" | "outline", label: string, icon: React.ComponentType<{ className?: string }> }> = {
-            'PENDING': { variant: 'secondary', label: 'Chờ xử lý', icon: Clock },
-            'CONFIRMED': { variant: 'outline', label: 'Đã xác nhận', icon: CheckCircle },
-            'PICKED_UP': { variant: 'default', label: 'Đã lấy hàng', icon: Truck },
-            'IN_TRANSIT': { variant: 'default', label: 'Đang vận chuyển', icon: Truck },
-            'OUT_FOR_DELIVERY': { variant: 'default', label: 'Đang giao hàng', icon: Truck },
-            'DELIVERED': { variant: 'default', label: 'Đã giao hàng', icon: CheckCircle },
-            'FAILED_DELIVERY': { variant: 'destructive', label: 'Giao hàng thất bại', icon: AlertCircle },
-            'RETURNED_TO_SENDER': { variant: 'destructive', label: 'Đã trả về', icon: AlertCircle },
+    const getStatusIcon = (status: string) => {
+        switch (status) {
+            case 'delivered':
+                return <CheckCircle className="h-4 w-4 text-green-500" />
+            case 'cancelled':
+                return <XCircle className="h-4 w-4 text-red-500" />
+            case 'pending':
+            case 'processing':
+                return <Clock className="h-4 w-4 text-yellow-500" />
+            default:
+                return <Package className="h-4 w-4 text-blue-500" />
         }
-        return statusMap[status] || { variant: 'secondary', label: status, icon: Clock }
+    }
+
+    const getStatusColor = (status: string) => {
+        switch (status) {
+            case 'delivered':
+                return 'bg-green-100 text-green-800'
+            case 'cancelled':
+                return 'bg-red-100 text-red-800'
+            case 'pending':
+                return 'bg-yellow-100 text-yellow-800'
+            case 'processing':
+                return 'bg-blue-100 text-blue-800'
+            default:
+                return 'bg-gray-100 text-gray-800'
+        }
     }
 
     if (isLoading) {
         return (
             <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    {[...Array(4)].map((_, i) => (
-                        <Card key={i}>
-                            <CardContent className="p-6">
-                                <div className="animate-pulse">
-                                    <div className="h-4 bg-muted rounded w-1/2 mb-2"></div>
-                                    <div className="h-8 bg-muted rounded w-1/3"></div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ))}
+                <div className="animate-pulse">
+                    <div className="h-8 bg-muted rounded w-1/3 mb-4"></div>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        {[...Array(4)].map((_, i) => (
+                            <div key={i} className="h-32 bg-muted rounded"></div>
+                        ))}
+                    </div>
                 </div>
-            </div>
-        )
-    }
-
-    if (!stats) {
-        return (
-            <div className="space-y-6">
-                <Card>
-                    <CardContent className="p-6">
-                        <p className="text-center text-muted-foreground">
-                            Không thể tải dữ liệu thống kê
-                        </p>
-                    </CardContent>
-                </Card>
             </div>
         )
     }
@@ -116,22 +137,22 @@ const ShippingDashboardPage = () => {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold">Tổng quan vận chuyển</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">Vận chuyển</h1>
                     <p className="text-muted-foreground">
-                        Quản lý và theo dõi hoạt động vận chuyển
+                        Tổng quan hệ thống vận chuyển
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
                     <Button asChild>
-                        <Link href="/admin/shipping/providers">
-                            <Truck className="w-4 h-4 mr-2" />
-                            Quản lý nhà vận chuyển
+                        <Link href="/admin/shipping/providers/new">
+                            <Plus className="w-4 h-4 mr-2" />
+                            Thêm nhà vận chuyển
                         </Link>
                     </Button>
-                    <Button asChild>
-                        <Link href="/admin/shipping/shipments">
+                    <Button asChild variant="outline">
+                        <Link href="/admin/shipping/rates/new">
                             <Package className="w-4 h-4 mr-2" />
-                            Quản lý đơn hàng
+                            Thêm biểu giá
                         </Link>
                     </Button>
                 </div>
@@ -145,9 +166,9 @@ const ShippingDashboardPage = () => {
                         <Truck className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{stats.totalProviders}</div>
+                        <div className="text-2xl font-bold">{stats?.totalProviders || 0}</div>
                         <p className="text-xs text-muted-foreground">
-                            {stats.activeProviders} đang hoạt động
+                            {stats?.activeProviders || 0} đang hoạt động
                         </p>
                     </CardContent>
                 </Card>
@@ -158,9 +179,9 @@ const ShippingDashboardPage = () => {
                         <Package className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{stats.totalRates}</div>
+                        <div className="text-2xl font-bold">{stats?.totalRates || 0}</div>
                         <p className="text-xs text-muted-foreground">
-                            {stats.activeRates} đang hoạt động
+                            {stats?.activeRates || 0} đang hoạt động
                         </p>
                     </CardContent>
                 </Card>
@@ -168,12 +189,12 @@ const ShippingDashboardPage = () => {
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Đơn hàng</CardTitle>
-                        <Package className="h-4 w-4 text-muted-foreground" />
+                        <BarChart3 className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{stats.totalShipments}</div>
+                        <div className="text-2xl font-bold">{stats?.totalShipments || 0}</div>
                         <p className="text-xs text-muted-foreground">
-                            {stats.deliveredShipments} đã giao hàng
+                            {stats?.deliveredShipments || 0} đã giao
                         </p>
                     </CardContent>
                 </Card>
@@ -185,172 +206,218 @@ const ShippingDashboardPage = () => {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">
-                            {stats.totalRevenue.toLocaleString('vi-VN')}đ
+                            {(stats?.totalRevenue || 0).toLocaleString('vi-VN')}đ
                         </div>
-                        <p className="text-xs text-muted-foreground">
-                            +{stats.monthlyRevenue.toLocaleString('vi-VN')}đ tháng này
-                        </p>
+                        <div className="flex items-center text-xs text-muted-foreground">
+                            {stats?.revenueChange && stats.revenueChange > 0 ? (
+                                <TrendingUp className="h-3 w-3 text-green-500 mr-1" />
+                            ) : (
+                                <TrendingDown className="h-3 w-3 text-red-500 mr-1" />
+                            )}
+                            {Math.abs(stats?.revenueChange || 0)}% so với tháng trước
+                        </div>
                     </CardContent>
                 </Card>
             </div>
 
-            {/* Shipment Status */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Status Overview */}
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                 <Card>
-                    <CardHeader>
-                        <CardTitle className="text-lg">Trạng thái đơn hàng</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <Clock className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-sm">Chờ xử lý</span>
-                            </div>
-                            <Badge variant="secondary">{stats.pendingShipments}</Badge>
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <Truck className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-sm">Đang vận chuyển</span>
-                            </div>
-                            <Badge variant="default">{stats.inTransitShipments}</Badge>
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <CheckCircle className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-sm">Đã giao hàng</span>
-                            </div>
-                            <Badge variant="default">{stats.deliveredShipments}</Badge>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* Recent Shipments */}
-                <Card className="md:col-span-2">
-                    <CardHeader>
-                        <CardTitle className="text-lg">Đơn hàng gần đây</CardTitle>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium">Chờ xử lý</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="space-y-3">
-                            {stats.recentShipments.map((shipment) => {
-                                const { variant, label, icon: Icon } = getStatusBadge(shipment.status)
-                                return (
-                                    <div key={shipment.id} className="flex items-center justify-between p-3 border rounded-lg">
-                                        <div className="flex items-center gap-3">
-                                            <Icon className="h-4 w-4 text-muted-foreground" />
-                                            <div>
-                                                <p className="font-medium">{shipment.order.orderNumber}</p>
-                                                <p className="text-sm text-muted-foreground">
-                                                    {shipment.provider.name} ({shipment.provider.code})
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <Badge variant={variant}>{label}</Badge>
-                                            <span className="text-xs text-muted-foreground">
-                                                {new Date(shipment.createdAt).toLocaleDateString('vi-VN')}
-                                            </span>
-                                        </div>
-                                    </div>
-                                )
-                            })}
+                        <div className="text-2xl font-bold text-yellow-600">
+                            {stats?.pendingShipments || 0}
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium">Đang xử lý</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-blue-600">
+                            {stats?.processingShipments || 0}
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium">Đã gửi</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-purple-600">
+                            {stats?.shippedShipments || 0}
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium">Đã giao</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-green-600">
+                            {stats?.deliveredShipments || 0}
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium">Đã hủy</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-red-600">
+                            {stats?.cancelledShipments || 0}
                         </div>
                     </CardContent>
                 </Card>
             </div>
 
-            {/* Top Providers */}
+            {/* Recent Activity & Top Providers */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Recent Shipments */}
+                <Card>
+                    <CardHeader>
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <CardTitle>Đơn hàng gần đây</CardTitle>
+                                <CardDescription>
+                                    {recentShipments.length} đơn hàng mới nhất
+                                </CardDescription>
+                            </div>
+                            <Button asChild size="sm">
+                                <Link href="/admin/shipping/shipments">
+                                    Xem tất cả
+                                </Link>
+                            </Button>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-4">
+                            {recentShipments.map((shipment) => (
+                                <div key={shipment.id} className="flex items-center justify-between p-3 border rounded-lg">
+                                    <div className="flex items-center gap-3">
+                                        {getStatusIcon(shipment.status)}
+                                        <div>
+                                            <p className="font-medium">{shipment.order.orderNumber}</p>
+                                            <p className="text-sm text-muted-foreground">
+                                                {shipment.provider.name}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="font-medium">
+                                            {shipment.shippingFee.toLocaleString('vi-VN')}đ
+                                        </p>
+                                        <Badge className={getStatusColor(shipment.status)}>
+                                            {shipment.status}
+                                        </Badge>
+                                    </div>
+                                </div>
+                            ))}
+                            {recentShipments.length === 0 && (
+                                <p className="text-center text-muted-foreground py-8">
+                                    Chưa có đơn hàng nào
+                                </p>
+                            )}
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Top Providers */}
+                <Card>
+                    <CardHeader>
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <CardTitle>Nhà vận chuyển hàng đầu</CardTitle>
+                                <CardDescription>
+                                    Theo số lượng đơn hàng và doanh thu
+                                </CardDescription>
+                            </div>
+                            <Button asChild size="sm">
+                                <Link href="/admin/shipping/providers">
+                                    Xem tất cả
+                                </Link>
+                            </Button>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-4">
+                            {topProviders.map((provider, index) => (
+                                <div key={provider.id} className="flex items-center justify-between p-3 border rounded-lg">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                                            <span className="text-sm font-medium">{index + 1}</span>
+                                        </div>
+                                        <div>
+                                            <p className="font-medium">{provider.name}</p>
+                                            <p className="text-sm text-muted-foreground">
+                                                {provider.shipmentCount} đơn hàng
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="font-medium">
+                                            {provider.revenue.toLocaleString('vi-VN')}đ
+                                        </p>
+                                        <p className="text-sm text-muted-foreground">
+                                            {provider.code}
+                                        </p>
+                                    </div>
+                                </div>
+                            ))}
+                            {topProviders.length === 0 && (
+                                <p className="text-center text-muted-foreground py-8">
+                                    Chưa có dữ liệu
+                                </p>
+                            )}
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Quick Actions */}
             <Card>
                 <CardHeader>
-                    <CardTitle className="text-lg">Nhà vận chuyển hàng đầu</CardTitle>
+                    <CardTitle>Thao tác nhanh</CardTitle>
                     <CardDescription>
-                        Dựa trên số lượng đơn hàng và doanh thu
+                        Truy cập nhanh các chức năng vận chuyển
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="space-y-4">
-                        {stats.topProviders.map((provider, index) => (
-                            <div key={provider.id} className="flex items-center justify-between p-4 border rounded-lg">
-                                <div className="flex items-center gap-4">
-                                    <div className="flex items-center justify-center w-8 h-8 bg-primary text-primary-foreground rounded-full text-sm font-medium">
-                                        {index + 1}
-                                    </div>
-                                    <div>
-                                        <p className="font-medium">{provider.name}</p>
-                                        <p className="text-sm text-muted-foreground">{provider.code}</p>
-                                    </div>
-                                </div>
-                                <div className="text-right">
-                                    <p className="font-medium">{provider.shipmentCount} đơn hàng</p>
-                                    <p className="text-sm text-muted-foreground">
-                                        {provider.revenue.toLocaleString('vi-VN')}đ
-                                    </p>
-                                </div>
-                            </div>
-                        ))}
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <Button asChild variant="outline" className="h-20 flex-col gap-2">
+                            <Link href="/admin/shipping/providers/new">
+                                <Truck className="h-6 w-6" />
+                                <span>Thêm nhà vận chuyển</span>
+                            </Link>
+                        </Button>
+                        <Button asChild variant="outline" className="h-20 flex-col gap-2">
+                            <Link href="/admin/shipping/rates/new">
+                                <Package className="h-6 w-6" />
+                                <span>Thêm biểu giá</span>
+                            </Link>
+                        </Button>
+                        <Button asChild variant="outline" className="h-20 flex-col gap-2">
+                            <Link href="/admin/shipping/shipments/new">
+                                <BarChart3 className="h-6 w-6" />
+                                <span>Tạo đơn hàng</span>
+                            </Link>
+                        </Button>
+                        <Button asChild variant="outline" className="h-20 flex-col gap-2">
+                            <Link href="/admin/shipping/shipments">
+                                <DollarSign className="h-6 w-6" />
+                                <span>Quản lý đơn hàng</span>
+                            </Link>
+                        </Button>
                     </div>
                 </CardContent>
             </Card>
-
-            {/* Quick Actions */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-lg">Quản lý nhà vận chuyển</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                        <Button asChild className="w-full">
-                            <Link href="/admin/shipping/providers">
-                                <Truck className="w-4 h-4 mr-2" />
-                                Xem tất cả nhà vận chuyển
-                            </Link>
-                        </Button>
-                        <Button asChild variant="outline" className="w-full">
-                            <Link href="/admin/shipping/providers/new">
-                                Thêm nhà vận chuyển mới
-                            </Link>
-                        </Button>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-lg">Quản lý biểu giá</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                        <Button asChild className="w-full">
-                            <Link href="/admin/shipping/rates">
-                                <Package className="w-4 h-4 mr-2" />
-                                Xem tất cả biểu giá
-                            </Link>
-                        </Button>
-                        <Button asChild variant="outline" className="w-full">
-                            <Link href="/admin/shipping/rates/new">
-                                Thêm biểu giá mới
-                            </Link>
-                        </Button>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-lg">Quản lý đơn hàng</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                        <Button asChild className="w-full">
-                            <Link href="/admin/shipping/shipments">
-                                <Package className="w-4 h-4 mr-2" />
-                                Xem tất cả đơn hàng
-                            </Link>
-                        </Button>
-                        <Button asChild variant="outline" className="w-full">
-                            <Link href="/admin/shipping/shipments/new">
-                                Tạo đơn vận chuyển mới
-                            </Link>
-                        </Button>
-                    </CardContent>
-                </Card>
-            </div>
         </div>
     )
 }
