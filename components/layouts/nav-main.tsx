@@ -1,7 +1,7 @@
 "use client"
 
 import { ChevronRight, type LucideIcon } from "lucide-react"
-import { usePathname } from "next/navigation"
+import { usePathname, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { useState } from "react"
@@ -36,14 +36,45 @@ export function NavMain({
   }[]
 }) {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const [openItem, setOpenItem] = useState<string | null>(null)
 
+  // Helper to parse url into pathname and query
+  function parseUrl(url: string) {
+    const [path, query] = url.split("?");
+    return { path, query };
+  }
+
+  // Custom active check for inventory subitems
+  function isInventorySubActive(subItem: { url: string }) {
+    const { path, query } = parseUrl(subItem.url);
+    if (!subItem.url.startsWith("/seller/inventory")) return false;
+    if (query) {
+      // Check if current pathname matches and all query params match
+      if (pathname !== path) return false;
+      const urlParams = new URLSearchParams(query);
+      for (const [key, value] of urlParams.entries()) {
+        if (searchParams.get(key) !== value) return false;
+      }
+      return true;
+    } else {
+      // No query, just match pathname
+      return pathname === path && !searchParams.get("tab");
+    }
+  }
+
   const isActiveUrl = (url: string) => {
-    return pathname === url
+    // Default: match pathname only
+    return pathname === url;
   }
 
   const hasActiveChild = (item: typeof items[0]) => {
-    return item.items?.some(subItem => pathname === subItem.url)
+    // For inventory: use custom logic
+    if (item.url.startsWith("/seller/inventory")) {
+      return item.items?.some(isInventorySubActive);
+    }
+    // Default: match pathname
+    return item.items?.some(subItem => pathname === subItem.url);
   }
 
   return (
@@ -88,7 +119,7 @@ export function NavMain({
                 <CollapsibleTrigger asChild>
                   <SidebarMenuButton
                     tooltip={item.title}
-                    className={cn(isParentActive && !isActive && "text-primary")}
+                    className={cn(isParentActive && "text-primary")}
                   >
                     {item.icon && <item.icon />}
                     <span>{item.title}</span>
@@ -98,7 +129,10 @@ export function NavMain({
                 <CollapsibleContent>
                   <SidebarMenuSub>
                     {item.items?.map((subItem) => {
-                      const isSubActive = isActiveUrl(subItem.url)
+                      // Custom active for inventory
+                      const isSubActive = item.url.startsWith("/seller/inventory")
+                        ? isInventorySubActive(subItem)
+                        : isActiveUrl(subItem.url);
                       return (
                         <SidebarMenuSubItem key={subItem.title}>
                           <SidebarMenuSubButton

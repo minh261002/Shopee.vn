@@ -270,6 +270,24 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         title: "Kho hàng",
         url: "/seller/inventory",
         icon: Warehouse,
+        items: [
+          {
+            title: "Tổng quan",
+            url: "/seller/inventory",
+          },
+          {
+            title: "Vị trí kho",
+            url: "/seller/inventory/locations",
+          },
+          {
+            title: "Thêm kho mới",
+            url: "/seller/inventory/locations/new",
+          },
+          {
+            title: "Lịch sử nhập/xuất",
+            url: "/seller/inventory?tab=movements",
+          },
+        ]
       },
       {
         title: "Khuyến mãi",

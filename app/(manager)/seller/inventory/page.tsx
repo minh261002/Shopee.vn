@@ -44,6 +44,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { FilterOption } from '@/components/dataTables/data-table-toolbar'
+import { useSearchParams } from 'next/navigation'
 
 // Types
 interface InventoryLocation {
@@ -157,6 +158,16 @@ const InventoryManagement = () => {
         movementType: 'ALL'
     })
     const { currentStore } = useStore()
+    const searchParams = useSearchParams();
+    const tabParam = searchParams?.get('tab');
+    const [tab, setTab] = useState<string>(tabParam || 'items');
+
+    // Sync tab state with URL param
+    useEffect(() => {
+        if (tabParam && tabParam !== tab) {
+            setTab(tabParam);
+        }
+    }, [tabParam]);
 
     // Define filters for items
     const itemFilters: FilterOption[] = [
@@ -790,7 +801,7 @@ const InventoryManagement = () => {
             </div>
 
             {/* Main Content */}
-            <Tabs defaultValue="items" className="space-y-4">
+            <Tabs value={tab} onValueChange={setTab} className="space-y-4">
                 <TabsList>
                     <TabsTrigger value="items">Tồn kho</TabsTrigger>
                     <TabsTrigger value="movements">Lịch sử nhập/xuất</TabsTrigger>
