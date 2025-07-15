@@ -286,9 +286,9 @@ const ProductDetail = () => {
                             <CardTitle>Hình ảnh sản phẩm</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            {product.images.length > 0 ? (
+                            {(product.images?.length ?? 0) > 0 ? (
                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                    {product.images.map((image, index) => (
+                                    {product.images?.map((image, index) => (
                                         <div key={index} className="relative aspect-square rounded-lg overflow-hidden border">
                                             <Image
                                                 src={image}
@@ -300,10 +300,7 @@ const ProductDetail = () => {
                                     ))}
                                 </div>
                             ) : (
-                                <div className="text-center py-8 text-muted-foreground">
-                                    <Package className="w-12 h-12 mx-auto mb-2" />
-                                    <p>Chưa có hình ảnh</p>
-                                </div>
+                                <div className="text-center text-gray-400">Không có ảnh sản phẩm</div>
                             )}
                         </CardContent>
                     </Card>
@@ -332,14 +329,14 @@ const ProductDetail = () => {
                     </Card>
 
                     {/* Variants */}
-                    {product.variants.length > 0 && (
+                    {(product.variants?.length ?? 0) > 0 && (
                         <Card>
                             <CardHeader>
                                 <CardTitle>Biến thể sản phẩm</CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <div className="space-y-4">
-                                    {product.variants.map((variant) => (
+                                    {product.variants?.map((variant) => (
                                         <div key={variant.id} className="flex items-center justify-between p-4 border rounded-lg">
                                             <div>
                                                 <h4 className="font-medium">{variant.name}: {variant.value}</h4>
@@ -413,10 +410,12 @@ const ProductDetail = () => {
                             <div className="flex items-center justify-between">
                                 <span>Giá gốc:</span>
                                 <span className="font-medium">
-                                    {product.originalPrice.toLocaleString('vi-VN')}đ
+                                    {typeof product.originalPrice === 'number'
+                                        ? product.originalPrice.toLocaleString('vi-VN') + 'đ'
+                                        : '—'}
                                 </span>
                             </div>
-                            {product.salePrice && (
+                            {typeof product.salePrice === 'number' && (
                                 <div className="flex items-center justify-between">
                                     <span>Giá khuyến mãi:</span>
                                     <span className="font-medium text-red-600">
@@ -466,7 +465,7 @@ const ProductDetail = () => {
                         <CardContent className="space-y-4">
                             <div>
                                 <span className="text-sm text-muted-foreground">Danh mục:</span>
-                                <p className="font-medium">{product.category.name}</p>
+                                <p className="font-medium">{product.category?.name || '—'}</p>
                             </div>
                             {product.brand && (
                                 <div>
@@ -474,14 +473,12 @@ const ProductDetail = () => {
                                     <p className="font-medium">{product.brand.name}</p>
                                 </div>
                             )}
-                            {product.tags.length > 0 && (
+                            {(product.tags?.length ?? 0) > 0 && (
                                 <div>
                                     <span className="text-sm text-muted-foreground">Tags:</span>
                                     <div className="flex flex-wrap gap-2 mt-2">
-                                        {product.tags.map((tag) => (
-                                            <Badge key={tag} variant="outline" className="text-xs">
-                                                {tag}
-                                            </Badge>
+                                        {product.tags?.map((tag, idx) => (
+                                            <span key={idx} className="badge">{tag}</span>
                                         ))}
                                     </div>
                                 </div>

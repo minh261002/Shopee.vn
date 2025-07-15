@@ -1,12 +1,12 @@
 "use client"
 
 import React, { useEffect, useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { DataTable } from '@/components/dataTables/data-table'
-import { Package, Plus, Search, Edit, Trash2, Eye, MoreHorizontal, Download } from 'lucide-react'
+import { Plus, Search, Edit, Trash2, Eye, MoreHorizontal, Download } from 'lucide-react'
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -92,9 +92,15 @@ const ProductsList = () => {
 
     const handleDelete = async (productId: string) => {
         try {
-            await api.delete(`/seller/products/${productId}?storeId=${currentStore?.id}`)
+            const response = await api.delete(`/seller/products/${productId}?storeId=${currentStore?.id}`)
             setProducts(products.filter(product => product.id !== productId))
-            success('Xóa sản phẩm thành công')
+
+            // Show appropriate message based on delete type
+            if (response.data.deletedPermanently) {
+                success('Xóa sản phẩm thành công')
+            } else {
+                success(`Sản phẩm đã được ẩn: ${response.data.reason}`)
+            }
         } catch (error) {
             console.error('Error deleting product:', error)
             showError('Có lỗi xảy ra khi xóa sản phẩm')
@@ -106,14 +112,35 @@ const ProductsList = () => {
 
         setIsBulkDeleting(true)
         try {
-            await Promise.all(
-                selectedProducts.map(id =>
-                    api.delete(`/seller/products/${id}?storeId=${currentStore?.id}`)
-                )
+            const deletePromises = selectedProducts.map(id =>
+                api.delete(`/seller/products/${id}?storeId=${currentStore?.id}`)
             )
+
+            const responses = await Promise.all(deletePromises)
+
+            // Count permanent vs soft deletes
+            let permanentDeletes = 0
+            let softDeletes = 0
+
+            responses.forEach(response => {
+                if (response.data.deletedPermanently) {
+                    permanentDeletes++
+                } else {
+                    softDeletes++
+                }
+            })
+
             setProducts(products.filter(product => !selectedProducts.includes(product.id)))
             setSelectedProducts([])
-            success(`Đã xóa ${selectedProducts.length} sản phẩm thành công`)
+
+            // Show appropriate message
+            if (permanentDeletes > 0 && softDeletes > 0) {
+                success(`Đã xóa ${permanentDeletes} sản phẩm và ẩn ${softDeletes} sản phẩm`)
+            } else if (permanentDeletes > 0) {
+                success(`Đã xóa ${permanentDeletes} sản phẩm thành công`)
+            } else {
+                success(`Đã ẩn ${softDeletes} sản phẩm`)
+            }
         } catch (error) {
             console.error('Error bulk deleting products:', error)
             showError('Có lỗi xảy ra khi xóa sản phẩm')
@@ -458,16 +485,58 @@ const ProductsList = () => {
             <Card>
                 <CardHeader>
                     <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <Package className="w-5 h-5" />
-                            <CardTitle>Quản lý sản phẩm</CardTitle>
+                        <div>
+                            <h1 className="text-2xl font-bold tracking-tight">Sản phẩm</h1>
+                            <p className="text-muted-foreground">
+                                Quản lý sản phẩm trong cửa hàng của bạn
+                            </p>
                         </div>
-                        <Button asChild>
-                            <Link href="/seller/products/new">
-                                <Plus className="w-4 h-4 mr-2" />
-                                Thêm sản phẩm
-                            </Link>
-                        </Button>
+                        <div className="flex items-center space-x-2">
+                            <Button
+                                variant="outline"
+                                onClick={resetFilters}
+                                disabled={!searchTerm && selectedProducts.length === 0}
+                            >
+                                Đặt lại
+                            </Button>
+                            <Button variant="outline" asChild>
+                                <Link href="/seller/products/trash">
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Sản phẩm đã ẩn
+                                </Link>
+                            </Button>
+                            {selectedProducts.length > 0 && (
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="destructive" disabled={isBulkDeleting}>
+                                            <Trash2 className="mr-2 h-4 w-4" />
+                                            Xóa ({selectedProducts.length})
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Xác nhận xóa</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                Bạn có chắc chắn muốn xóa {selectedProducts.length} sản phẩm đã chọn?
+                                                Hành động này không thể hoàn tác.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Hủy</AlertDialogCancel>
+                                            <AlertDialogAction onClick={handleBulkDelete}>
+                                                Xóa
+                                            </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            )}
+                            <Button asChild>
+                                <Link href="/seller/products/new">
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    Thêm sản phẩm
+                                </Link>
+                            </Button>
+                        </div>
                     </div>
                 </CardHeader>
                 <CardContent className="space-y-4">

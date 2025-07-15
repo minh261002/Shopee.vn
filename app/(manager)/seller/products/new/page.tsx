@@ -80,7 +80,7 @@ const NewProduct = () => {
         width: '',
         height: '',
         categoryId: '',
-        brandId: '',
+        brandId: 'none',
         status: 'DRAFT' as ProductStatus,
         condition: 'NEW' as ProductCondition,
         tags: [] as string[],
@@ -192,6 +192,24 @@ const NewProduct = () => {
                 return
             }
 
+            // Validate price
+            if (parseFloat(formData.originalPrice) <= 0) {
+                showError('Giá gốc phải lớn hơn 0')
+                return
+            }
+
+            // Validate sale price
+            if (formData.salePrice && parseFloat(formData.salePrice) >= parseFloat(formData.originalPrice)) {
+                showError('Giá khuyến mãi phải nhỏ hơn giá gốc')
+                return
+            }
+
+            // Validate stock
+            if (parseInt(formData.stock) < 0) {
+                showError('Tồn kho không thể âm')
+                return
+            }
+
             const productData = {
                 ...formData,
                 storeId: currentStore.id, // Truyền storeId từ currentStore
@@ -199,15 +217,13 @@ const NewProduct = () => {
                 variants: variants.length > 0 ? variants : undefined,
                 originalPrice: parseFloat(formData.originalPrice),
                 salePrice: formData.salePrice ? parseFloat(formData.salePrice) : undefined,
+                stock: parseInt(formData.stock),
                 weight: formData.weight ? parseFloat(formData.weight) : undefined,
                 length: formData.length ? parseFloat(formData.length) : undefined,
                 width: formData.width ? parseFloat(formData.width) : undefined,
                 height: formData.height ? parseFloat(formData.height) : undefined,
-                stock: parseInt(formData.stock),
                 lowStockThreshold: parseInt(formData.lowStockThreshold),
-                // Handle features and specs as objects, not JSON strings
-                features: formData.features ? { description: formData.features } : undefined,
-                specifications: formData.specifications ? { description: formData.specifications } : undefined,
+                brandId: formData.brandId === 'none' ? undefined : formData.brandId,
             }
 
             await api.post('/seller/products', productData)
@@ -604,7 +620,7 @@ const NewProduct = () => {
                                             <SelectValue placeholder="Chọn thương hiệu" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="">Không có thương hiệu</SelectItem>
+                                            <SelectItem value="none">Không có thương hiệu</SelectItem>
                                             {brands.map((brand) => (
                                                 <SelectItem key={brand.id} value={brand.id}>
                                                     {brand.name}

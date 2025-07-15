@@ -21,40 +21,41 @@ enum UserStatus {
 }
 
 model User {
-  id              String                  @id @default(uuid())
-  name            String                  @db.Text
-  email           String
-  emailVerified   Boolean
-  image           String?                 @db.Text
-  role            Role                    @default(USER)
-  createdAt       DateTime
-  updatedAt       DateTime
-  sessions        Session[]
-  accounts        Account[]
-  addresses       UserAddress[]
-  stores          Store[]
-  orders          Order[]
-  carts           Cart[]
-  wishlists       Wishlist[]
-  productReviews  ProductReview[]
-  storeReviews    StoreReview[]
-  storeFollowers  StoreFollower[]
-  notifications   Notification[]
-  couponUsages    CouponUsage[]
-  returnRequests  ReturnRequest[]
-  loyaltyAccount  LoyaltyAccount?
-  supportTickets  SupportTicket[]
-  liveStreams     LiveStream[]
-  streamViews     StreamView[]
-  streamChats     StreamChat[]
-  affiliate       Affiliate?
-  searchQueries   SearchQuery[]
-  recommendations ProductRecommendation[]
-  behaviors       UserBehavior[]
-  productShares   ProductShare[]
-  following       UserFollow[]            @relation("UserFollowing")
-  followers       UserFollow[]            @relation("UserFollowers")
-  subscriptions   Subscription[]
+  id               String                  @id @default(uuid())
+  name             String                  @db.Text
+  email            String
+  emailVerified    Boolean
+  image            String?                 @db.Text
+  role             Role                    @default(USER)
+  createdAt        DateTime
+  updatedAt        DateTime
+  sessions         Session[]
+  accounts         Account[]
+  addresses        UserAddress[]
+  stores           Store[]
+  orders           Order[]
+  carts            Cart[]
+  wishlists        Wishlist[]
+  productReviews   ProductReview[]
+  storeReviews     StoreReview[]
+  storeFollowers   StoreFollower[]
+  notifications    Notification[]
+  couponUsages     CouponUsage[]
+  returnRequests   ReturnRequest[]
+  loyaltyAccount   LoyaltyAccount?
+  supportTickets   SupportTicket[]
+  liveStreams      LiveStream[]
+  streamViews      StreamView[]
+  streamChats      StreamChat[]
+  affiliate        Affiliate?
+  searchQueries    SearchQuery[]
+  recommendations  ProductRecommendation[]
+  behaviors        UserBehavior[]
+  productShares    ProductShare[]
+  following        UserFollow[]            @relation("UserFollowing")
+  followers        UserFollow[]            @relation("UserFollowers")
+  subscriptions    Subscription[]
+  productAuditLogs ProductAuditLog[]
 
   @@unique([email])
   @@map("users")
@@ -660,6 +661,16 @@ model Product {
   isDigital        Boolean @default(false)
   requiresShipping Boolean @default(true)
 
+  // Soft delete
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+  deletedBy String?
+
+  // Audit fields
+  createdBy      String?
+  updatedBy      String?
+  lastModifiedBy String?
+
   // Dates
   publishedAt DateTime?
   createdAt   DateTime  @default(now())
@@ -681,14 +692,16 @@ model Product {
   targetRecommendations ProductRecommendation[] @relation("TargetProduct")
   behaviors             UserBehavior[]
   shares                ProductShare[]
+  auditLogs             ProductAuditLog[]
 
   @@index([storeId])
   @@index([categoryId])
   @@index([brandId])
   @@index([status])
-  @@index([rating])
+  @@index([isDeleted])
+  @@index([isFeatured])
   @@index([createdAt])
-  @@index([publishedAt])
+  @@index([updatedAt])
   @@map("products")
 }
 
@@ -2463,4 +2476,27 @@ model SubscriptionPlan {
 
   @@index([isActive])
   @@map("subscription_plans")
+}
+
+model ProductAuditLog {
+  id        String      @id @default(uuid())
+  productId String
+  userId    String
+  action    AuditAction
+  before    Json?
+  after     Json?
+  createdAt DateTime    @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([userId])
+  @@map("product_audit_log")
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
 }

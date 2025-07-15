@@ -60,6 +60,7 @@ export async function GET(request: NextRequest) {
     // Build where clause
     const where: Prisma.ProductWhereInput = {
       storeId: store.id,
+      status: { not: "INACTIVE" }, // Exclude soft-deleted products
     };
 
     if (search) {
@@ -170,7 +171,7 @@ export async function GET(request: NextRequest) {
           slug: store.slug,
           logo: store.logo || undefined,
           rating: store.rating,
-          isVerified: store.verificationStatus === "VERIFIED",
+          isVerified: store.isVerified,
         },
         // Transform images to simple URLs for frontend compatibility
         images: product.images.map((img) => img.url),
@@ -205,6 +206,43 @@ export async function POST(req: Request) {
     }
 
     const data = await req.json();
+
+    // Validation
+    if (
+      !data.name ||
+      !data.originalPrice ||
+      data.stock === undefined ||
+      !data.categoryId
+    ) {
+      return NextResponse.json(
+        { error: "Name, originalPrice, stock, and category are required" },
+        { status: 400 }
+      );
+    }
+
+    // Validate price
+    if (data.originalPrice <= 0) {
+      return NextResponse.json(
+        { error: "Original price must be greater than 0" },
+        { status: 400 }
+      );
+    }
+
+    // Validate sale price
+    if (data.salePrice && data.salePrice >= data.originalPrice) {
+      return NextResponse.json(
+        { error: "Sale price must be less than original price" },
+        { status: 400 }
+      );
+    }
+
+    // Validate stock
+    if (data.stock < 0) {
+      return NextResponse.json(
+        { error: "Stock cannot be negative" },
+        { status: 400 }
+      );
+    }
 
     // Get storeId from request body or query params
     const storeId = data.storeId || req.url.split("?")[0].split("/").pop();
@@ -247,6 +285,47 @@ export async function POST(req: Request) {
       }
     }
 
+    // Validate SKU uniqueness globally (since database constraint is global)
+    if (data.sku && data.sku.trim()) {
+      const existingSku = await prisma.product.findFirst({
+        where: {
+          sku: data.sku.trim(),
+          status: { not: "INACTIVE" },
+        },
+      });
+
+      if (existingSku) {
+        return NextResponse.json(
+          { error: "SKU đã tồn tại trong hệ thống" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Generate slug if not provided
+    const slug =
+      data.slug ||
+      data.name
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9\s-]/g, "")
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-")
+        .trim();
+
+    // Check if slug exists
+    const existingSlug = await prisma.product.findFirst({
+      where: {
+        slug,
+        status: { not: "INACTIVE" },
+      },
+    });
+
+    if (existingSlug) {
+      return NextResponse.json({ error: "Slug đã tồn tại" }, { status: 400 });
+    }
+
     // Handle product status based on store type and selected status
     let finalStatus: ProductStatus = data.status;
 
@@ -255,64 +334,136 @@ export async function POST(req: Request) {
       finalStatus = "PENDING_APPROVAL";
     }
 
-    // Create product
-    const product = await prisma.product.create({
-      data: {
-        ...data,
+    // Create product using transaction for data consistency
+    const product = await prisma.$transaction(async (tx) => {
+      // Extract images and variants from data to create them separately
+      const { images, variants, ...productDataWithoutRelations } = data;
+
+      const productData = {
+        ...productDataWithoutRelations,
         tags: data.tags ? JSON.stringify(data.tags) : null,
         storeId: store.id,
-        brandId: data.brandId, // Đảm bảo brandId được lưu
+        brandId: data.brandId,
         status: finalStatus,
         publishedAt: finalStatus === "ACTIVE" ? new Date() : null,
-        images: {
-          create: data.images?.map((image: { url: string; alt: string }) => ({
-            url: image.url,
-            alt: image.alt,
-          })),
-        },
-        variants: data.variants
-          ? {
-              create: data.variants,
-            }
-          : undefined,
-      },
-      include: {
-        brand: {
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-            logo: true,
+        // Handle SKU - only set if it's not empty
+        sku: data.sku && data.sku.trim() ? data.sku.trim() : null,
+      };
+
+      const product = await tx.product.create({
+        data: productData,
+        include: {
+          brand: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              logo: true,
+            },
+          },
+          category: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+            },
           },
         },
-        category: {
-          select: {
-            id: true,
-            name: true,
-            slug: true,
+      });
+
+      // Create product images if provided
+      if (images && images.length > 0) {
+        await Promise.all(
+          images.map(
+            (
+              image: { url: string; alt?: string; caption?: string },
+              index: number
+            ) =>
+              tx.productImage.create({
+                data: {
+                  productId: product.id,
+                  url: image.url,
+                  alt: image.alt || product.name,
+                  caption: image.caption,
+                  order: index,
+                  isMain: index === 0,
+                },
+              })
+          )
+        );
+      }
+
+      // Create product variants if provided
+      if (variants && variants.length > 0) {
+        await Promise.all(
+          variants.map(
+            (variant: {
+              name: string;
+              value: string;
+              price?: number;
+              stock: number;
+              sku: string;
+            }) =>
+              tx.productVariant.create({
+                data: {
+                  productId: product.id,
+                  name: `${variant.name}: ${variant.value}`,
+                  sku: variant.sku,
+                  price: variant.price
+                    ? parseFloat(variant.price.toString())
+                    : null,
+                  stock: parseInt(variant.stock.toString()),
+                  attributes: JSON.stringify({ [variant.name]: variant.value }),
+                  isActive: true,
+                },
+              })
+          )
+        );
+      }
+
+      // Fetch the complete product with all relations
+      const completeProduct = await tx.product.findUnique({
+        where: { id: product.id },
+        include: {
+          brand: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              logo: true,
+            },
+          },
+          category: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+            },
+          },
+          images: {
+            select: {
+              id: true,
+              url: true,
+              alt: true,
+              order: true,
+              isMain: true,
+            },
+          },
+          variants: {
+            select: {
+              id: true,
+              name: true,
+              sku: true,
+              price: true,
+              stock: true,
+              attributes: true,
+              isActive: true,
+            },
           },
         },
-        images: {
-          select: {
-            id: true,
-            url: true,
-            alt: true,
-            order: true,
-            isMain: true,
-          },
-        },
-        variants: {
-          select: {
-            id: true,
-            name: true,
-            sku: true,
-            price: true,
-            stock: true,
-            attributes: true,
-            isActive: true,
-          },
-        },
-      },
+      });
+
+      return completeProduct;
     });
 
     // If status was changed to PENDING_APPROVAL, inform the user

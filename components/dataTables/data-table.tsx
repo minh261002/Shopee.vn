@@ -51,6 +51,11 @@ interface DataTableProps<TData, TValue> {
     showSearch?: boolean
     emptyMessage?: string
     className?: string
+    onPageChange?: (page: number) => void
+    onPageSizeChange?: (pageSize: number) => void
+    totalPages?: number
+    currentPage?: number
+    totalItems?: number
 }
 
 export function DataTable<TData, TValue>({
@@ -65,6 +70,11 @@ export function DataTable<TData, TValue>({
     showSearch = true,
     emptyMessage = "Không có dữ liệu.",
     className,
+    onPageChange,
+    onPageSizeChange,
+    totalPages,
+    currentPage,
+    totalItems,
 }: DataTableProps<TData, TValue>) {
     const [sorting, setSorting] = React.useState<SortingState>([])
     const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
@@ -94,6 +104,45 @@ export function DataTable<TData, TValue>({
             rowSelection,
         },
     })
+
+    // Generate page numbers for pagination
+    const generatePageNumbers = () => {
+        if (!totalPages) return []
+
+        const pages = []
+        const maxVisiblePages = 5
+        const current = currentPage || 1
+
+        if (totalPages <= maxVisiblePages) {
+            for (let i = 1; i <= totalPages; i++) {
+                pages.push(i)
+            }
+        } else {
+            if (current <= 3) {
+                for (let i = 1; i <= 4; i++) {
+                    pages.push(i)
+                }
+                pages.push('...')
+                pages.push(totalPages)
+            } else if (current >= totalPages - 2) {
+                pages.push(1)
+                pages.push('...')
+                for (let i = totalPages - 3; i <= totalPages; i++) {
+                    pages.push(i)
+                }
+            } else {
+                pages.push(1)
+                pages.push('...')
+                for (let i = current - 1; i <= current + 1; i++) {
+                    pages.push(i)
+                }
+                pages.push('...')
+                pages.push(totalPages)
+            }
+        }
+
+        return pages
+    }
 
     return (
         <div className={`space-y-4 ${className || ""}`}>
@@ -208,7 +257,7 @@ export function DataTable<TData, TValue>({
                 </Table>
             </div>
 
-            {/* Pagination */}
+            {/* Enhanced Pagination */}
             {showPagination && (
                 <div className="flex items-center justify-between px-2">
                     <div className="flex-1 text-sm text-muted-foreground">
@@ -218,6 +267,11 @@ export function DataTable<TData, TValue>({
                                 {table.getFilteredRowModel().rows.length} hàng được chọn.
                             </>
                         )}
+                        {totalItems && (
+                            <span className="ml-4">
+                                Tổng cộng: {totalItems} mục
+                            </span>
+                        )}
                     </div>
                     <div className="flex items-center space-x-6 lg:space-x-8">
                         <div className="flex items-center space-x-2">
@@ -225,7 +279,9 @@ export function DataTable<TData, TValue>({
                             <select
                                 value={table.getState().pagination.pageSize}
                                 onChange={(e) => {
-                                    table.setPageSize(Number(e.target.value))
+                                    const newPageSize = Number(e.target.value)
+                                    table.setPageSize(newPageSize)
+                                    onPageSizeChange?.(newPageSize)
                                 }}
                                 className="h-8 w-[70px] rounded border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
                             >
@@ -236,14 +292,16 @@ export function DataTable<TData, TValue>({
                                 ))}
                             </select>
                         </div>
-                        <div className="flex w-[100px] items-center justify-center text-sm font-medium">
-                            Trang {table.getState().pagination.pageIndex + 1} / {table.getPageCount()}
-                        </div>
+
+                        {/* Page Navigation */}
                         <div className="flex items-center space-x-2">
                             <Button
                                 variant="outline"
                                 className="hidden h-8 w-8 p-0 lg:flex"
-                                onClick={() => table.setPageIndex(0)}
+                                onClick={() => {
+                                    table.setPageIndex(0)
+                                    onPageChange?.(1)
+                                }}
                                 disabled={!table.getCanPreviousPage()}
                             >
                                 <span className="sr-only">Trang đầu</span>
@@ -252,16 +310,45 @@ export function DataTable<TData, TValue>({
                             <Button
                                 variant="outline"
                                 className="h-8 w-8 p-0"
-                                onClick={() => table.previousPage()}
+                                onClick={() => {
+                                    table.previousPage()
+                                    onPageChange?.(table.getState().pagination.pageIndex)
+                                }}
                                 disabled={!table.getCanPreviousPage()}
                             >
                                 <span className="sr-only">Trang trước</span>
                                 <ChevronLeft className="h-4 w-4" />
                             </Button>
+
+                            {/* Page Numbers */}
+                            <div className="flex items-center space-x-1">
+                                {generatePageNumbers().map((page, index) => (
+                                    <React.Fragment key={index}>
+                                        {page === '...' ? (
+                                            <span className="px-2 text-muted-foreground">...</span>
+                                        ) : (
+                                            <Button
+                                                variant={page === (currentPage || 1) ? "default" : "outline"}
+                                                className="h-8 w-8 p-0"
+                                                onClick={() => {
+                                                    table.setPageIndex((page as number) - 1)
+                                                    onPageChange?.(page as number)
+                                                }}
+                                            >
+                                                {page}
+                                            </Button>
+                                        )}
+                                    </React.Fragment>
+                                ))}
+                            </div>
+
                             <Button
                                 variant="outline"
                                 className="h-8 w-8 p-0"
-                                onClick={() => table.nextPage()}
+                                onClick={() => {
+                                    table.nextPage()
+                                    onPageChange?.(table.getState().pagination.pageIndex + 2)
+                                }}
                                 disabled={!table.getCanNextPage()}
                             >
                                 <span className="sr-only">Trang tiếp</span>
@@ -270,12 +357,19 @@ export function DataTable<TData, TValue>({
                             <Button
                                 variant="outline"
                                 className="hidden h-8 w-8 p-0 lg:flex"
-                                onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                                onClick={() => {
+                                    table.setPageIndex(table.getPageCount() - 1)
+                                    onPageChange?.(table.getPageCount())
+                                }}
                                 disabled={!table.getCanNextPage()}
                             >
                                 <span className="sr-only">Trang cuối</span>
                                 <ChevronsRight className="h-4 w-4" />
                             </Button>
+                        </div>
+
+                        <div className="flex w-[100px] items-center justify-center text-sm font-medium">
+                            Trang {table.getState().pagination.pageIndex + 1} / {table.getPageCount()}
                         </div>
                     </div>
                 </div>

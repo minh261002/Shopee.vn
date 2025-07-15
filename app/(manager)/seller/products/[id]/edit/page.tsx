@@ -270,6 +270,24 @@ const EditProduct = () => {
                 return
             }
 
+            // Validate price
+            if (parseFloat(formData.originalPrice) <= 0) {
+                showError('Giá gốc phải lớn hơn 0')
+                return
+            }
+
+            // Validate sale price
+            if (formData.salePrice && parseFloat(formData.salePrice) >= parseFloat(formData.originalPrice)) {
+                showError('Giá khuyến mãi phải nhỏ hơn giá gốc')
+                return
+            }
+
+            // Validate stock
+            if (parseInt(formData.stock) < 0) {
+                showError('Tồn kho không thể âm')
+                return
+            }
+
             const productData = {
                 ...formData,
                 images: images.map(url => ({ url, alt: formData.name })),

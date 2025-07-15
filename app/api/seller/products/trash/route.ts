@@ -2,33 +2,57 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { headers } from "next/headers";
-import { ProductStatus, Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import type { ProductsResponse, ProductWithRelations } from "@/types/store";
 
-// GET - Lấy danh sách tất cả sản phẩm cho admin
+// GET - Lấy danh sách sản phẩm đã bị ẩn của seller
 export async function GET(request: NextRequest) {
   try {
     const session = await auth.api.getSession({
       headers: await headers(),
     });
 
-    if (!session?.user || session.user.role !== "ADMIN") {
+    if (!session?.user || session.user.role !== "SELLER") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
+    const storeId = searchParams.get("storeId");
+
+    if (!storeId) {
+      return NextResponse.json(
+        { error: "storeId is required" },
+        { status: 400 }
+      );
+    }
+
+    // Kiểm tra store có thuộc về seller này không
+    const store = await prisma.store.findFirst({
+      where: {
+        id: storeId,
+        ownerId: session.user.id,
+      },
+    });
+
+    if (!store) {
+      return NextResponse.json(
+        { error: "Store not found or unauthorized" },
+        { status: 404 }
+      );
+    }
+
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "10");
     const search = searchParams.get("search") || "";
-    const status = searchParams.get("status") as ProductStatus | undefined;
-    const sortBy = searchParams.get("sortBy") || "createdAt";
+    const sortBy = searchParams.get("sortBy") || "updatedAt";
     const sortOrder = searchParams.get("sortOrder") || "desc";
 
     const skip = (page - 1) * limit;
 
-    // Build where clause
+    // Build where clause - only inactive products
     const where: Prisma.ProductWhereInput = {
-      status: { not: "INACTIVE" }, // Exclude soft-deleted products
+      storeId: store.id,
+      status: "INACTIVE",
     };
 
     if (search) {
@@ -36,11 +60,8 @@ export async function GET(request: NextRequest) {
         { name: { contains: search } },
         { description: { contains: search } },
         { sku: { contains: search } },
-        { store: { name: { contains: search } } },
       ];
     }
-
-    if (status) where.status = status;
 
     // Build orderBy
     const orderBy: Prisma.ProductOrderByWithRelationInput = {};
@@ -50,7 +71,7 @@ export async function GET(request: NextRequest) {
     else if (sortBy === "rating") orderBy.rating = sortOrder as "asc" | "desc";
     else if (sortBy === "popularity")
       orderBy.purchaseCount = sortOrder as "asc" | "desc";
-    else orderBy.createdAt = sortOrder as "asc" | "desc";
+    else orderBy.updatedAt = sortOrder as "asc" | "desc";
 
     // Get total count
     const total = await prisma.product.count({ where });
@@ -72,23 +93,6 @@ export async function GET(request: NextRequest) {
             name: true,
             slug: true,
             logo: true,
-          },
-        },
-        store: {
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-            logo: true,
-            rating: true,
-            isVerified: true,
-            owner: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
-            },
           },
         },
         images: {
@@ -122,6 +126,7 @@ export async function GET(request: NextRequest) {
           select: {
             reviews: true,
             wishlists: true,
+            orderItems: true,
           },
         },
       },
@@ -147,6 +152,14 @@ export async function GET(request: NextRequest) {
               logo: product.brand.logo || undefined,
             }
           : undefined,
+        store: {
+          id: store.id,
+          name: store.name,
+          slug: store.slug,
+          logo: store.logo || undefined,
+          rating: store.rating,
+          isVerified: store.isVerified,
+        },
         // Transform images to simple URLs for frontend compatibility
         images: product.images.map((img) => img.url),
       })) as unknown as ProductWithRelations[],
@@ -160,7 +173,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(response);
   } catch (error) {
-    console.error("Error fetching products:", error);
+    console.error("Error fetching deleted products:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

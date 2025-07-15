@@ -63,6 +63,21 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         icon: Store,
       },
       {
+        title: "Sản phẩm",
+        url: "/admin/products",
+        icon: Package,
+        items: [
+          {
+            title: "Danh sách",
+            url: "/admin/products",
+          },
+          {
+            title: "Chờ duyệt",
+            url: "/admin/products?status=PENDING_APPROVAL",
+          },
+        ]
+      },
+      {
         title: "Danh mục ",
         url: "/admin/categories",
         icon: AppWindowMac,
