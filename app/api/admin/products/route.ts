@@ -24,6 +24,15 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get("sortBy") || "createdAt";
     const sortOrder = searchParams.get("sortOrder") || "desc";
 
+    console.log("Admin products API - Request params:", {
+      page,
+      limit,
+      search,
+      status,
+      sortBy,
+      sortOrder,
+    });
+
     const skip = (page - 1) * limit;
 
     // Build where clause
@@ -40,7 +49,12 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    if (status) where.status = status;
+    if (status) {
+      where.status = status;
+      console.log("Applying status filter:", status);
+    }
+
+    console.log("Final where clause:", JSON.stringify(where, null, 2));
 
     // Build orderBy
     const orderBy: Prisma.ProductOrderByWithRelationInput = {};
@@ -132,6 +146,25 @@ export async function GET(request: NextRequest) {
 
     const totalPages = Math.ceil(total / limit);
 
+    // Get stats for all products (regardless of current filter)
+    const stats = await prisma.product.groupBy({
+      by: ["status"],
+      where: {
+        status: { not: "INACTIVE" }, // Exclude soft-deleted products
+      },
+      _count: {
+        status: true,
+      },
+    });
+
+    const statsMap = stats.reduce(
+      (acc, stat) => {
+        acc[stat.status] = stat._count.status;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
+
     const response: ProductsResponse = {
       products: products.map((product) => ({
         ...product,
@@ -155,6 +188,15 @@ export async function GET(request: NextRequest) {
         limit,
         total,
         totalPages,
+      },
+      stats: {
+        total:
+          (statsMap["ACTIVE"] || 0) +
+          (statsMap["PENDING_APPROVAL"] || 0) +
+          (statsMap["DRAFT"] || 0),
+        pending: statsMap["PENDING_APPROVAL"] || 0,
+        active: statsMap["ACTIVE"] || 0,
+        draft: statsMap["DRAFT"] || 0,
       },
     };
 

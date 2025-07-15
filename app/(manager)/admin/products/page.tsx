@@ -59,18 +59,39 @@ const AdminProductsPage = () => {
         total: 0,
         totalPages: 0,
     })
+    const [stats, setStats] = useState({
+        total: 0,
+        pending: 0,
+        active: 0,
+        draft: 0,
+    })
 
     // Initialize status filter from URL params
     useEffect(() => {
         const statusParam = searchParams.get('status')
-        if (statusParam && statusParam !== 'ALL') {
-            setStatusFilter(statusParam as ProductStatus)
+        console.log('URL status param:', statusParam)
+        if (statusParam) {
+            setStatusFilter(statusParam as ProductStatus | 'ALL')
+            // Reset pagination when filter changes
+            setPagination(prev => ({ ...prev, page: 1 }))
+        } else {
+            setStatusFilter('ALL')
         }
     }, [searchParams])
 
     useEffect(() => {
+        console.log('Status filter changed to:', statusFilter)
         fetchProducts()
     }, [statusFilter, pagination.page])
+
+    // Add search effect
+    useEffect(() => {
+        const timeoutId = setTimeout(() => {
+            fetchProducts()
+        }, 500) // Debounce search
+
+        return () => clearTimeout(timeoutId)
+    }, [searchTerm])
 
     const fetchProducts = async () => {
         try {
@@ -78,13 +99,29 @@ const AdminProductsPage = () => {
             const params = new URLSearchParams({
                 page: pagination.page.toString(),
                 limit: pagination.limit.toString(),
-                ...(statusFilter !== 'ALL' && { status: statusFilter }),
-                ...(searchTerm && { search: searchTerm }),
             })
 
+            // Add status filter if not ALL
+            if (statusFilter && statusFilter !== 'ALL') {
+                params.append('status', statusFilter)
+            }
+
+            // Add search term if exists
+            if (searchTerm) {
+                params.append('search', searchTerm)
+            }
+
+            console.log('Fetching products with params:', params.toString())
+            console.log('Status filter:', statusFilter)
+
             const response = await api.get(`/admin/products?${params.toString()}`)
+            console.log('API response products count:', response.data.products?.length || 0)
+
             setProducts(response.data.products || [])
             setPagination(response.data.pagination || pagination)
+            if (response.data.stats) {
+                setStats(response.data.stats)
+            }
         } catch (error) {
             console.error('Error fetching products:', error)
             showError('Không thể tải danh sách sản phẩm')
@@ -231,7 +268,7 @@ const AdminProductsPage = () => {
                         label: "Xem chi tiết",
                         icon: Eye,
                         onClick: () => {
-                            const url = `/seller/products/${product.id}`
+                            const url = `/admin/products/${product.id}`
                             window.open(url, '_blank')
                         },
                     },
@@ -279,19 +316,11 @@ const AdminProductsPage = () => {
         },
     ]
 
-    const filteredProducts = products.filter(product => {
-        const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            product.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            product.store.name.toLowerCase().includes(searchTerm.toLowerCase())
+    const filteredProducts = products
 
-        const matchesStatus = statusFilter === 'ALL' || product.status === statusFilter
-
-        return matchesSearch && matchesStatus
-    })
-
-    const pendingProducts = products.filter(p => p.status === 'PENDING_APPROVAL').length
-    const activeProducts = products.filter(p => p.status === 'ACTIVE').length
-    const totalProducts = products.length
+    const pendingProducts = stats.pending
+    const activeProducts = stats.active
+    const totalProducts = stats.total
 
     return (
         <div className="space-y-6">

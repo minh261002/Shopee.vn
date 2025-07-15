@@ -612,6 +612,12 @@ export interface StoresResponse {
 export interface ProductsResponse {
   products: ProductWithRelations[];
   pagination: PaginationMeta;
+  stats?: {
+    total: number;
+    pending: number;
+    active: number;
+    draft: number;
+  };
 }
 
 export interface OrdersResponse {
