@@ -45,6 +45,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { FilterOption } from '@/components/dataTables/data-table-toolbar'
 import { useSearchParams } from 'next/navigation'
+import Image from 'next/image'
 
 // Types
 interface InventoryLocation {
@@ -434,9 +435,10 @@ const InventoryManagement = () => {
                     <div className="flex items-center space-x-3">
                         <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-muted">
                             {item.product?.images && item.product.images.length > 0 ? (
-                                <img
+                                <Image
                                     src={item.product.images[0]}
                                     alt={item.product.name}
+                                    fill
                                     className="w-full h-full object-cover"
                                 />
                             ) : (

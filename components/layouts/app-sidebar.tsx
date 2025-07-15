@@ -443,7 +443,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader className="items-center">
-        <Image src="/images/logo-color.png" alt="logo" width={150} height={100} />
+        {isAdmin && <Image src="/images/logo-color.png" alt="logo" width={150} height={100} />}
         {!isAdmin && <StoreSwitcher />}
       </SidebarHeader>
       <SidebarContent>
