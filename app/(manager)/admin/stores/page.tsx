@@ -12,14 +12,17 @@ import Image from 'next/image'
 import { api } from '@/lib/axios'
 import type { StoreData } from '@/types/store'
 import { Store, Eye, Edit, Trash2 } from 'lucide-react'
+import { FilterOption } from '@/components/dataTables/data-table-toolbar'
 
 const StoresPage = () => {
     const [stores, setStores] = useState<StoreData[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [searchTerm, setSearchTerm] = useState('')
-    const [statusFilter, setStatusFilter] = useState<string>('ALL')
-    const [typeFilter, setTypeFilter] = useState<string>('ALL')
-    const [verificationFilter, setVerificationFilter] = useState<string>('ALL')
+    const [activeFilters, setActiveFilters] = useState<Record<string, string>>({
+        status: 'ALL',
+        type: 'ALL',
+        verification: 'ALL'
+    })
     const [pagination, setPagination] = useState({
         page: 1,
         limit: 10,
@@ -27,6 +30,46 @@ const StoresPage = () => {
         totalPages: 0,
     })
     const router = useRouter()
+
+    // Define filters
+    const filters: FilterOption[] = [
+        {
+            key: 'status',
+            label: 'Trạng thái',
+            type: 'select',
+            placeholder: 'Chọn trạng thái',
+            options: [
+                { value: 'ACTIVE', label: 'Hoạt động' },
+                { value: 'PENDING_APPROVAL', label: 'Chờ duyệt' },
+                { value: 'SUSPENDED', label: 'Tạm khóa' },
+                { value: 'CLOSED', label: 'Đã đóng' }
+            ]
+        },
+        {
+            key: 'type',
+            label: 'Loại hình',
+            type: 'select',
+            placeholder: 'Chọn loại hình',
+            options: [
+                { value: 'INDIVIDUAL', label: 'Cá nhân' },
+                { value: 'BUSINESS', label: 'Doanh nghiệp' },
+                { value: 'CORPORATION', label: 'Tập đoàn' },
+                { value: 'OFFICIAL', label: 'Chính thức' }
+            ]
+        },
+        {
+            key: 'verification',
+            label: 'Xác thực',
+            type: 'select',
+            placeholder: 'Chọn trạng thái xác thực',
+            options: [
+                { value: 'PENDING', label: 'Chờ xác thực' },
+                { value: 'VERIFIED', label: 'Đã xác thực' },
+                { value: 'REJECTED', label: 'Từ chối' },
+                { value: 'EXPIRED', label: 'Hết hạn' }
+            ]
+        }
+    ]
 
     // Fetch stores
     const fetchStores = async (page = 1, search = '', status = '', type = '', verification = '') => {
@@ -53,8 +96,52 @@ const StoresPage = () => {
     }
 
     useEffect(() => {
-        fetchStores(1, searchTerm, statusFilter, typeFilter, verificationFilter)
-    }, [searchTerm, statusFilter, typeFilter, verificationFilter])
+        fetchStores(
+            1,
+            searchTerm,
+            activeFilters.status,
+            activeFilters.type,
+            activeFilters.verification
+        )
+    }, [searchTerm, activeFilters])
+
+    // Handle search change
+    const handleSearchChange = (value: string) => {
+        setSearchTerm(value)
+    }
+
+    // Handle filter change
+    const handleFilterChange = (key: string, value: string) => {
+        setActiveFilters(prev => ({
+            ...prev,
+            [key]: value
+        }))
+    }
+
+    // Handle clear filters
+    const handleClearFilters = () => {
+        setActiveFilters({
+            status: 'ALL',
+            type: 'ALL',
+            verification: 'ALL'
+        })
+    }
+
+    // Handle export
+    const handleExport = () => {
+        toast.info('Tính năng xuất dữ liệu đang được phát triển')
+    }
+
+    // Handle refresh
+    const handleRefresh = () => {
+        fetchStores(
+            1,
+            searchTerm,
+            activeFilters.status,
+            activeFilters.type,
+            activeFilters.verification
+        )
+    }
 
     // Handle view
     const handleView = (store: StoreData) => {
@@ -193,6 +280,7 @@ const StoresPage = () => {
         },
         {
             id: "actions",
+            header: "Thao tác",
             cell: ({ row }) => (
                 <DataTableRowActions
                     row={row}
@@ -231,59 +319,7 @@ const StoresPage = () => {
                         Tổng cộng {pagination.total} cửa hàng
                     </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                    {/* Filters */}
-                    <div className="flex flex-col lg:flex-row items-start lg:items-center gap-4">
-                        <div className="relative flex-1 max-w-sm">
-                            <input
-                                type="text"
-                                placeholder="Tìm kiếm cửa hàng..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-2">
-                            <select
-                                value={statusFilter}
-                                onChange={(e) => setStatusFilter(e.target.value)}
-                                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                                <option value="ALL">Tất cả trạng thái</option>
-                                <option value="ACTIVE">Hoạt động</option>
-                                <option value="PENDING_APPROVAL">Chờ duyệt</option>
-                                <option value="SUSPENDED">Tạm khóa</option>
-                                <option value="CLOSED">Đã đóng</option>
-
-                            </select>
-
-                            <select
-                                value={typeFilter}
-                                onChange={(e) => setTypeFilter(e.target.value)}
-                                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                                <option value="ALL">Tất cả loại hình</option>
-                                <option value="INDIVIDUAL">Cá nhân</option>
-                                <option value="BUSINESS">Doanh nghiệp</option>
-                                <option value="CORPORATION">Tập đoàn</option>
-                                <option value="OFFICIAL">Chính thức</option>
-                            </select>
-
-                            <select
-                                value={verificationFilter}
-                                onChange={(e) => setVerificationFilter(e.target.value)}
-                                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                                <option value="ALL">Tất cả xác thực</option>
-                                <option value="PENDING">Chờ xác thực</option>
-                                <option value="VERIFIED">Đã xác thực</option>
-                                <option value="REJECTED">Từ chối</option>
-                                <option value="EXPIRED">Hết hạn</option>
-                            </select>
-                        </div>
-                    </div>
-
+                <CardContent>
                     <DataTable
                         columns={columns}
                         data={stores}
@@ -291,6 +327,14 @@ const StoresPage = () => {
                         searchPlaceholder="Tìm kiếm cửa hàng..."
                         isLoading={isLoading}
                         emptyMessage="Không có cửa hàng nào."
+                        filters={filters}
+                        activeFilters={activeFilters}
+                        onFilterChange={handleFilterChange}
+                        onClearFilters={handleClearFilters}
+                        onSearchChange={handleSearchChange}
+                        onExport={handleExport}
+                        onRefresh={handleRefresh}
+                        showToolbar={true}
                     />
                 </CardContent>
             </Card>

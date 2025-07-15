@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { DataTable } from '@/components/dataTables/data-table'
 import { DataTableColumnHeader } from '@/components/dataTables/data-table-column-header'
@@ -11,9 +10,10 @@ import { DataTableRowActions } from '@/components/dataTables/data-table-row-acti
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/axios'
-import { Plus, Package, Search, Filter, Download } from 'lucide-react'
+import { Plus, Package } from 'lucide-react'
 import Link from 'next/link'
 import { ColumnDef } from '@tanstack/react-table'
+import { FilterOption } from '@/components/dataTables/data-table-toolbar'
 
 interface ShippingRate {
     id: string
@@ -35,8 +35,42 @@ const ShippingRatesPage = () => {
     const router = useRouter()
     const [rates, setRates] = useState<ShippingRate[]>([])
     const [isLoading, setIsLoading] = useState(true)
-    const [searchTerm, setSearchTerm] = useState('')
-    const [statusFilter, setStatusFilter] = useState<string>('all')
+    const [activeFilters, setActiveFilters] = useState<Record<string, string>>({
+        status: 'ALL',
+        provider: 'ALL'
+    })
+
+    // Define filters
+    const filters: FilterOption[] = [
+        {
+            key: 'status',
+            label: 'Trạng thái',
+            type: 'select',
+            placeholder: 'Chọn trạng thái',
+            options: [
+                { value: 'ACTIVE', label: 'Đang hoạt động' },
+                { value: 'INACTIVE', label: 'Không hoạt động' }
+            ]
+        },
+        {
+            key: 'provider',
+            label: 'Nhà vận chuyển',
+            type: 'select',
+            placeholder: 'Chọn nhà vận chuyển',
+            options: [
+                { value: 'GHN', label: 'Giao Hàng Nhanh' },
+                { value: 'GHTK', label: 'Giao Hàng Tiết Kiệm' },
+                { value: 'VNPOST', label: 'Bưu điện Việt Nam' },
+                { value: 'J&T', label: 'J&T Express' },
+                { value: 'NINJAVAN', label: 'Ninja Van' },
+                { value: 'SPX', label: 'SPX Express' },
+                { value: 'BE', label: 'Best Express' },
+                { value: 'GRAB', label: 'Grab Express' },
+                { value: 'AHAMOVE', label: 'AhaMove' },
+                { value: 'VIETTEL', label: 'Viettel Post' }
+            ]
+        }
+    ]
 
     const fetchRates = async () => {
         try {
@@ -54,6 +88,55 @@ const ShippingRatesPage = () => {
     useEffect(() => {
         fetchRates()
     }, [])
+
+    // Handle filter change
+    const handleFilterChange = (key: string, value: string) => {
+        setActiveFilters(prev => ({
+            ...prev,
+            [key]: value
+        }))
+    }
+
+    // Handle clear filters
+    const handleClearFilters = () => {
+        setActiveFilters({
+            status: 'ALL',
+            provider: 'ALL'
+        })
+    }
+
+    // Handle export
+    const handleExport = () => {
+        const headers = ['Tên', 'Phương thức', 'Nhà vận chuyển', 'Giá cơ bản', 'Giá/kg', 'Thời gian', 'Trạng thái']
+        const csvData = rates.map(rate => [
+            rate.name,
+            rate.method,
+            rate.provider.name,
+            rate.basePrice,
+            rate.perKgPrice,
+            rate.estimatedDays,
+            rate.isActive ? 'Hoạt động' : 'Không hoạt động'
+        ])
+
+        const csvContent = [headers, ...csvData]
+            .map(row => row.map(cell => `"${cell}"`).join(','))
+            .join('\n')
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+        const link = document.createElement('a')
+        const url = URL.createObjectURL(blob)
+        link.setAttribute('href', url)
+        link.setAttribute('download', 'shipping-rates.csv')
+        link.style.visibility = 'hidden'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+    }
+
+    // Handle refresh
+    const handleRefresh = () => {
+        fetchRates()
+    }
 
     const handleDelete = async (id: string) => {
         try {
@@ -78,16 +161,6 @@ const ShippingRatesPage = () => {
             toast.error('Có lỗi xảy ra khi cập nhật trạng thái')
         }
     }
-
-    const filteredRates = rates.filter(rate => {
-        const matchesSearch = rate.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            rate.method.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            rate.provider.name.toLowerCase().includes(searchTerm.toLowerCase())
-        const matchesStatus = statusFilter === 'all' ||
-            (statusFilter === 'active' && rate.isActive) ||
-            (statusFilter === 'inactive' && !rate.isActive)
-        return matchesSearch && matchesStatus
-    })
 
     const columns: ColumnDef<ShippingRate>[] = [
         {
@@ -160,6 +233,7 @@ const ShippingRatesPage = () => {
         },
         {
             id: 'actions',
+            header: 'Thao tác',
             cell: ({ row }) => (
                 <DataTableRowActions
                     row={row}
@@ -186,33 +260,6 @@ const ShippingRatesPage = () => {
             ),
         },
     ]
-
-    const exportToCSV = () => {
-        const headers = ['Tên', 'Phương thức', 'Nhà vận chuyển', 'Giá cơ bản', 'Giá/kg', 'Thời gian', 'Trạng thái']
-        const csvData = filteredRates.map(rate => [
-            rate.name,
-            rate.method,
-            rate.provider.name,
-            rate.basePrice,
-            rate.perKgPrice,
-            rate.estimatedDays,
-            rate.isActive ? 'Hoạt động' : 'Không hoạt động'
-        ])
-
-        const csvContent = [headers, ...csvData]
-            .map(row => row.map(cell => `"${cell}"`).join(','))
-            .join('\n')
-
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-        const link = document.createElement('a')
-        const url = URL.createObjectURL(blob)
-        link.setAttribute('href', url)
-        link.setAttribute('download', 'shipping-rates.csv')
-        link.style.visibility = 'hidden'
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-    }
 
     return (
         <div className="space-y-6">
@@ -280,57 +327,29 @@ const ShippingRatesPage = () => {
                 </Card>
             </div>
 
-            {/* Filters */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>Bộ lọc</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex flex-col sm:flex-row gap-4">
-                        <div className="flex-1">
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                    placeholder="Tìm kiếm theo tên, phương thức, nhà vận chuyển..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="pl-10"
-                                />
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <Filter className="h-4 w-4 text-muted-foreground" />
-                            <select
-                                value={statusFilter}
-                                onChange={(e) => setStatusFilter(e.target.value)}
-                                className="px-3 py-2 border rounded-md text-sm"
-                            >
-                                <option value="all">Tất cả trạng thái</option>
-                                <option value="active">Đang hoạt động</option>
-                                <option value="inactive">Không hoạt động</option>
-                            </select>
-                        </div>
-                        <Button variant="outline" onClick={exportToCSV}>
-                            <Download className="h-4 w-4 mr-2" />
-                            Xuất CSV
-                        </Button>
-                    </div>
-                </CardContent>
-            </Card>
-
             {/* Data Table */}
             <Card>
                 <CardHeader>
                     <CardTitle>Danh sách biểu giá</CardTitle>
                     <CardDescription>
-                        {filteredRates.length} biểu giá được tìm thấy
+                        Quản lý tất cả biểu giá vận chuyển
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
                     <DataTable
                         columns={columns}
-                        data={filteredRates}
+                        data={rates}
+                        searchKey="name"
+                        searchPlaceholder="Tìm kiếm biểu giá..."
                         isLoading={isLoading}
+                        emptyMessage="Không có biểu giá nào."
+                        filters={filters}
+                        activeFilters={activeFilters}
+                        onFilterChange={handleFilterChange}
+                        onClearFilters={handleClearFilters}
+                        onExport={handleExport}
+                        onRefresh={handleRefresh}
+                        showToolbar={true}
                     />
                 </CardContent>
             </Card>

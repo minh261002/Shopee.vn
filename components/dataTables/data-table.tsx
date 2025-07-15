@@ -38,6 +38,8 @@ import {
     Settings2,
     Search
 } from "lucide-react"
+import { DataTableToolbar, FilterOption } from "./data-table-toolbar"
+import { useMediaQuery } from "@/hooks/use-media-query"
 
 interface DataTableProps<TData, TValue> {
     columns: ColumnDef<TData, TValue>[]
@@ -56,6 +58,19 @@ interface DataTableProps<TData, TValue> {
     totalPages?: number
     currentPage?: number
     totalItems?: number
+
+    // Enhanced toolbar props
+    filters?: FilterOption[]
+    activeFilters?: Record<string, string>
+    onFilterChange?: (key: string, value: string) => void
+    onClearFilters?: () => void
+    showFilters?: boolean
+    onExport?: () => void
+    onRefresh?: () => void
+    showExport?: boolean
+    showRefresh?: boolean
+    showToolbar?: boolean
+    onSearchChange?: (value: string) => void
 }
 
 export function DataTable<TData, TValue>({
@@ -75,11 +90,25 @@ export function DataTable<TData, TValue>({
     totalPages,
     currentPage,
     totalItems,
+    filters = [],
+    activeFilters = {},
+    onFilterChange,
+    onClearFilters,
+    showFilters = true,
+    onExport,
+    onRefresh,
+    showExport = true,
+    showRefresh = true,
+    showToolbar = true,
+    onSearchChange,
 }: DataTableProps<TData, TValue>) {
     const [sorting, setSorting] = React.useState<SortingState>([])
     const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
     const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
     const [rowSelection, setRowSelection] = React.useState({})
+    const [searchValue, setSearchValue] = React.useState("")
+
+    const isMobile = useMediaQuery("(max-width: 768px)")
 
     const table = useReactTable({
         data,
@@ -104,6 +133,28 @@ export function DataTable<TData, TValue>({
             rowSelection,
         },
     })
+
+    // Handle search
+    const handleSearchChange = (value: string) => {
+        setSearchValue(value)
+        if (searchKey) {
+            table.getColumn(searchKey as string)?.setFilterValue(value)
+        }
+        onSearchChange?.(value)
+    }
+
+    // Handle column visibility
+    const handleColumnVisibilityChange = (columnId: string, visible: boolean) => {
+        table.getColumn(columnId)?.toggleVisibility(visible)
+    }
+
+    // Get visible columns for toolbar
+    const visibleColumns = React.useMemo(() => {
+        return table.getAllColumns()
+            .filter(column => column.getCanHide())
+            .filter(column => column.getIsVisible())
+            .map(column => column.id)
+    }, [table])
 
     // Generate page numbers for pagination
     const generatePageNumbers = () => {
@@ -146,53 +197,82 @@ export function DataTable<TData, TValue>({
 
     return (
         <div className={`space-y-4 ${className || ""}`}>
-            {/* Toolbar */}
-            <div className="flex items-center justify-between">
-                <div className="flex flex-1 items-center space-x-2">
-                    {showSearch && searchKey && (
-                        <div className="relative flex-1 max-w-sm">
-                            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                placeholder={searchPlaceholder}
-                                value={(table.getColumn(searchKey as string)?.getFilterValue() as string) ?? ""}
-                                onChange={(event) =>
-                                    table.getColumn(searchKey as string)?.setFilterValue(event.target.value)
-                                }
-                                className="pl-8"
-                            />
-                        </div>
+            {/* Enhanced Toolbar */}
+            {showToolbar && (
+                <DataTableToolbar
+                    searchValue={searchValue}
+                    onSearchChange={handleSearchChange}
+                    searchPlaceholder={searchPlaceholder}
+                    showSearch={showSearch}
+                    filters={filters}
+                    activeFilters={activeFilters}
+                    onFilterChange={onFilterChange}
+                    onClearFilters={onClearFilters}
+                    showFilters={showFilters}
+                    onExport={onExport}
+                    onRefresh={onRefresh}
+                    showExport={showExport}
+                    showRefresh={showRefresh}
+                    columns={columns.map(col => ({
+                        id: col.id || '',
+                        label: typeof col.header === 'string' ? col.header : col.id || ''
+                    }))}
+                    visibleColumns={visibleColumns}
+                    onColumnVisibilityChange={handleColumnVisibilityChange}
+                    showColumnToggle={showColumnToggle}
+                    isMobile={isMobile}
+                />
+            )}
+
+            {/* Legacy Toolbar (fallback) */}
+            {!showToolbar && (
+                <div className="flex items-center justify-between">
+                    <div className="flex flex-1 items-center space-x-2">
+                        {showSearch && searchKey && (
+                            <div className="relative flex-1 max-w-sm">
+                                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                    placeholder={searchPlaceholder}
+                                    value={(table.getColumn(searchKey as string)?.getFilterValue() as string) ?? ""}
+                                    onChange={(event) =>
+                                        table.getColumn(searchKey as string)?.setFilterValue(event.target.value)
+                                    }
+                                    className="pl-8"
+                                />
+                            </div>
+                        )}
+                    </div>
+                    {showColumnToggle && (
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="outline" className="ml-auto">
+                                    <Settings2 className="h-4 w-4" />
+                                    Cột
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                {table
+                                    .getAllColumns()
+                                    .filter((column) => column.getCanHide())
+                                    .map((column) => {
+                                        return (
+                                            <DropdownMenuCheckboxItem
+                                                key={column.id}
+                                                className="capitalize"
+                                                checked={column.getIsVisible()}
+                                                onCheckedChange={(value) =>
+                                                    column.toggleVisibility(!!value)
+                                                }
+                                            >
+                                                {column.id}
+                                            </DropdownMenuCheckboxItem>
+                                        )
+                                    })}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     )}
                 </div>
-                {showColumnToggle && (
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="outline" className="ml-auto">
-                                <Settings2 className="h-4 w-4" />
-                                Cột
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            {table
-                                .getAllColumns()
-                                .filter((column) => column.getCanHide())
-                                .map((column) => {
-                                    return (
-                                        <DropdownMenuCheckboxItem
-                                            key={column.id}
-                                            className="capitalize"
-                                            checked={column.getIsVisible()}
-                                            onCheckedChange={(value) =>
-                                                column.toggleVisibility(!!value)
-                                            }
-                                        >
-                                            {column.id}
-                                        </DropdownMenuCheckboxItem>
-                                    )
-                                })}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                )}
-            </div>
+            )}
 
             {/* Table */}
             <div className="rounded-md border">
@@ -298,78 +378,50 @@ export function DataTable<TData, TValue>({
                             <Button
                                 variant="outline"
                                 className="hidden h-8 w-8 p-0 lg:flex"
-                                onClick={() => {
-                                    table.setPageIndex(0)
-                                    onPageChange?.(1)
-                                }}
-                                disabled={!table.getCanPreviousPage()}
+                                onClick={() => onPageChange?.(1)}
+                                disabled={currentPage === 1}
                             >
-                                <span className="sr-only">Trang đầu</span>
+                                <span className="sr-only">Go to first page</span>
                                 <ChevronsLeft className="h-4 w-4" />
                             </Button>
                             <Button
                                 variant="outline"
                                 className="h-8 w-8 p-0"
-                                onClick={() => {
-                                    table.previousPage()
-                                    onPageChange?.(table.getState().pagination.pageIndex)
-                                }}
-                                disabled={!table.getCanPreviousPage()}
+                                onClick={() => onPageChange?.(Math.max(1, (currentPage || 1) - 1))}
+                                disabled={currentPage === 1}
                             >
-                                <span className="sr-only">Trang trước</span>
+                                <span className="sr-only">Go to previous page</span>
                                 <ChevronLeft className="h-4 w-4" />
                             </Button>
-
-                            {/* Page Numbers */}
-                            <div className="flex items-center space-x-1">
-                                {generatePageNumbers().map((page, index) => (
-                                    <React.Fragment key={index}>
-                                        {page === '...' ? (
-                                            <span className="px-2 text-muted-foreground">...</span>
-                                        ) : (
-                                            <Button
-                                                variant={page === (currentPage || 1) ? "default" : "outline"}
-                                                className="h-8 w-8 p-0"
-                                                onClick={() => {
-                                                    table.setPageIndex((page as number) - 1)
-                                                    onPageChange?.(page as number)
-                                                }}
-                                            >
-                                                {page}
-                                            </Button>
-                                        )}
-                                    </React.Fragment>
-                                ))}
-                            </div>
-
+                            {generatePageNumbers().map((page, index) => (
+                                <Button
+                                    key={index}
+                                    variant={page === currentPage ? "default" : "outline"}
+                                    className="h-8 w-8 p-0"
+                                    onClick={() => typeof page === 'number' && onPageChange?.(page)}
+                                    disabled={page === '...'}
+                                >
+                                    {page}
+                                </Button>
+                            ))}
                             <Button
                                 variant="outline"
                                 className="h-8 w-8 p-0"
-                                onClick={() => {
-                                    table.nextPage()
-                                    onPageChange?.(table.getState().pagination.pageIndex + 2)
-                                }}
-                                disabled={!table.getCanNextPage()}
+                                onClick={() => onPageChange?.((currentPage || 1) + 1)}
+                                disabled={currentPage === totalPages}
                             >
-                                <span className="sr-only">Trang tiếp</span>
+                                <span className="sr-only">Go to next page</span>
                                 <ChevronRight className="h-4 w-4" />
                             </Button>
                             <Button
                                 variant="outline"
                                 className="hidden h-8 w-8 p-0 lg:flex"
-                                onClick={() => {
-                                    table.setPageIndex(table.getPageCount() - 1)
-                                    onPageChange?.(table.getPageCount())
-                                }}
-                                disabled={!table.getCanNextPage()}
+                                onClick={() => onPageChange?.(totalPages || 1)}
+                                disabled={currentPage === totalPages}
                             >
-                                <span className="sr-only">Trang cuối</span>
+                                <span className="sr-only">Go to last page</span>
                                 <ChevronsRight className="h-4 w-4" />
                             </Button>
-                        </div>
-
-                        <div className="flex w-[100px] items-center justify-center text-sm font-medium">
-                            Trang {table.getState().pagination.pageIndex + 1} / {table.getPageCount()}
                         </div>
                     </div>
                 </div>
@@ -378,15 +430,17 @@ export function DataTable<TData, TValue>({
     )
 }
 
-// Column helpers
 export function createColumnHelper<T>() {
     return {
-        accessor: <K extends keyof T>(key: K) => ({
-            accessorKey: key as string,
+        accessorKey: <K extends keyof T>(key: K) => ({
+            accessorKey: key,
             id: key as string,
         }),
-        display: (id: string) => ({
-            id,
+        display: <K extends keyof T>(key: K, options: { header: string; cell?: (value: T[K]) => React.ReactNode }) => ({
+            accessorKey: key,
+            id: key as string,
+            header: options.header,
+            cell: options.cell,
         }),
     }
 } 

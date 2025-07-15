@@ -17,6 +17,7 @@ import type { Category, CategoriesResponse } from '@/types/category';
 const CategoryPage = () => {
     const [categories, setCategories] = useState<Category[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
     const [pagination, setPagination] = useState({
         page: 1,
         limit: 10,
@@ -47,8 +48,23 @@ const CategoryPage = () => {
     };
 
     useEffect(() => {
-        fetchCategories();
-    }, []);
+        fetchCategories(1, searchTerm);
+    }, [searchTerm]);
+
+    // Handle search change
+    const handleSearchChange = (value: string) => {
+        setSearchTerm(value);
+    };
+
+    // Handle export
+    const handleExport = () => {
+        toast.info('Tính năng xuất dữ liệu đang được phát triển');
+    };
+
+    // Handle refresh
+    const handleRefresh = () => {
+        fetchCategories(1, searchTerm);
+    };
 
     // Handle delete
     const handleDelete = async (category: Category) => {
@@ -188,7 +204,6 @@ const CategoryPage = () => {
                         <CardDescription>
                             Tổng cộng {pagination.total} danh mục
                         </CardDescription>
-
                     </div>
                     <div className="flex items-center justify-end">
                         <Button onClick={handleAddNew}>
@@ -205,6 +220,10 @@ const CategoryPage = () => {
                         searchPlaceholder="Tìm kiếm danh mục..."
                         isLoading={isLoading}
                         emptyMessage="Không có danh mục nào."
+                        onSearchChange={handleSearchChange}
+                        onExport={handleExport}
+                        onRefresh={handleRefresh}
+                        showToolbar={true}
                     />
                 </CardContent>
             </Card>

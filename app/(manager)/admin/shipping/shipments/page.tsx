@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { DataTable } from '@/components/dataTables/data-table'
 import { DataTableColumnHeader } from '@/components/dataTables/data-table-column-header'
@@ -11,9 +10,10 @@ import { DataTableRowActions } from '@/components/dataTables/data-table-row-acti
 import { toast } from 'sonner'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { api } from '@/lib/axios'
-import { Plus, Truck, Search, Filter, Download, Package } from 'lucide-react'
+import { Plus, Truck, Package } from 'lucide-react'
 import Link from 'next/link'
 import { ColumnDef } from '@tanstack/react-table'
+import { FilterOption } from '@/components/dataTables/data-table-toolbar'
 
 interface Shipment {
     id: string
@@ -48,8 +48,27 @@ const ShipmentsPage = () => {
     const searchParams = useSearchParams()
     const [shipments, setShipments] = useState<Shipment[]>([])
     const [isLoading, setIsLoading] = useState(true)
-    const [searchTerm, setSearchTerm] = useState('')
-    const [statusFilter, setStatusFilter] = useState<string>('all')
+    const [activeFilters, setActiveFilters] = useState<Record<string, string>>({
+        status: 'ALL'
+    })
+
+    // Define filters
+    const filters: FilterOption[] = [
+        {
+            key: 'status',
+            label: 'Trạng thái',
+            type: 'select',
+            placeholder: 'Chọn trạng thái',
+            options: [
+                { value: 'pending', label: 'Chờ xử lý' },
+                { value: 'processing', label: 'Đang xử lý' },
+                { value: 'shipped', label: 'Đã gửi' },
+                { value: 'delivered', label: 'Đã giao' },
+                { value: 'cancelled', label: 'Đã hủy' },
+                { value: 'returned', label: 'Đã trả' }
+            ]
+        }
+    ]
 
     const fetchShipments = async () => {
         try {
@@ -72,6 +91,55 @@ const ShipmentsPage = () => {
         fetchShipments()
     }, [searchParams])
 
+    // Handle filter change
+    const handleFilterChange = (key: string, value: string) => {
+        setActiveFilters(prev => ({
+            ...prev,
+            [key]: value
+        }))
+    }
+
+    // Handle clear filters
+    const handleClearFilters = () => {
+        setActiveFilters({
+            status: 'ALL'
+        })
+    }
+
+    // Handle export
+    const handleExport = () => {
+        const headers = ['Mã đơn hàng', 'Khách hàng', 'Nhà vận chuyển', 'Mã vận đơn', 'Phí vận chuyển', 'Tổng tiền', 'Trạng thái', 'Ngày tạo']
+        const csvData = shipments.map(shipment => [
+            shipment.order.orderNumber,
+            shipment.order.customer.name,
+            shipment.provider.name,
+            shipment.trackingNumber || '',
+            shipment.shippingFee,
+            shipment.order.totalAmount,
+            shipment.status,
+            new Date(shipment.createdAt).toLocaleDateString('vi-VN')
+        ])
+
+        const csvContent = [headers, ...csvData]
+            .map(row => row.map(cell => `"${cell}"`).join(','))
+            .join('\n')
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+        const link = document.createElement('a')
+        const url = URL.createObjectURL(blob)
+        link.setAttribute('href', url)
+        link.setAttribute('download', 'shipments.csv')
+        link.style.visibility = 'hidden'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+    }
+
+    // Handle refresh
+    const handleRefresh = () => {
+        fetchShipments()
+    }
+
     const handleDelete = async (id: string) => {
         try {
             await api.delete(`/admin/shipping/shipments/${id}`)
@@ -93,14 +161,6 @@ const ShipmentsPage = () => {
             toast.error('Có lỗi xảy ra khi cập nhật trạng thái')
         }
     }
-
-    const filteredShipments = shipments.filter(shipment => {
-        const matchesSearch = shipment.order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            shipment.trackingNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            shipment.order.customer.name.toLowerCase().includes(searchTerm.toLowerCase())
-        const matchesStatus = statusFilter === 'all' || shipment.status === statusFilter
-        return matchesSearch && matchesStatus
-    })
 
     const columns: ColumnDef<Shipment>[] = [
         {
@@ -196,6 +256,7 @@ const ShipmentsPage = () => {
         },
         {
             id: 'actions',
+            header: 'Thao tác',
             cell: ({ row }) => (
                 <DataTableRowActions
                     row={row}
@@ -223,34 +284,6 @@ const ShipmentsPage = () => {
             ),
         },
     ]
-
-    const exportToCSV = () => {
-        const headers = ['Mã đơn hàng', 'Khách hàng', 'Nhà vận chuyển', 'Mã vận đơn', 'Phí vận chuyển', 'Tổng tiền', 'Trạng thái', 'Ngày tạo']
-        const csvData = filteredShipments.map(shipment => [
-            shipment.order.orderNumber,
-            shipment.order.customer.name,
-            shipment.provider.name,
-            shipment.trackingNumber || '',
-            shipment.shippingFee,
-            shipment.order.totalAmount,
-            shipment.status,
-            new Date(shipment.createdAt).toLocaleDateString('vi-VN')
-        ])
-
-        const csvContent = [headers, ...csvData]
-            .map(row => row.map(cell => `"${cell}"`).join(','))
-            .join('\n')
-
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-        const link = document.createElement('a')
-        const url = URL.createObjectURL(blob)
-        link.setAttribute('href', url)
-        link.setAttribute('download', 'shipments.csv')
-        link.style.visibility = 'hidden'
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-    }
 
     const getStatusStats = () => {
         const stats = {
@@ -342,61 +375,29 @@ const ShipmentsPage = () => {
                 </Card>
             </div>
 
-            {/* Filters */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>Bộ lọc</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex flex-col sm:flex-row gap-4">
-                        <div className="flex-1">
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                    placeholder="Tìm kiếm theo mã đơn hàng, mã vận đơn, khách hàng..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="pl-10"
-                                />
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <Filter className="h-4 w-4 text-muted-foreground" />
-                            <select
-                                value={statusFilter}
-                                onChange={(e) => setStatusFilter(e.target.value)}
-                                className="px-3 py-2 border rounded-md text-sm"
-                            >
-                                <option value="all">Tất cả trạng thái</option>
-                                <option value="pending">Chờ xử lý</option>
-                                <option value="processing">Đang xử lý</option>
-                                <option value="shipped">Đã gửi</option>
-                                <option value="delivered">Đã giao</option>
-                                <option value="cancelled">Đã hủy</option>
-                                <option value="returned">Đã trả</option>
-                            </select>
-                        </div>
-                        <Button variant="outline" onClick={exportToCSV}>
-                            <Download className="h-4 w-4 mr-2" />
-                            Xuất CSV
-                        </Button>
-                    </div>
-                </CardContent>
-            </Card>
-
             {/* Data Table */}
             <Card>
                 <CardHeader>
                     <CardTitle>Danh sách đơn hàng</CardTitle>
                     <CardDescription>
-                        {filteredShipments.length} đơn hàng được tìm thấy
+                        Quản lý tất cả đơn hàng vận chuyển
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
                     <DataTable
                         columns={columns}
-                        data={filteredShipments}
+                        data={shipments}
+                        searchKey="order"
+                        searchPlaceholder="Tìm kiếm đơn hàng..."
                         isLoading={isLoading}
+                        emptyMessage="Không có đơn hàng nào."
+                        filters={filters}
+                        activeFilters={activeFilters}
+                        onFilterChange={handleFilterChange}
+                        onClearFilters={handleClearFilters}
+                        onExport={handleExport}
+                        onRefresh={handleRefresh}
+                        showToolbar={true}
                     />
                 </CardContent>
             </Card>

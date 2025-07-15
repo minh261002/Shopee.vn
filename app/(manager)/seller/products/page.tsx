@@ -4,9 +4,8 @@ import React, { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { DataTable } from '@/components/dataTables/data-table'
-import { Plus, Search, Edit, Trash2, Eye, MoreHorizontal, Download } from 'lucide-react'
+import { Plus, Edit, Trash2, Eye, MoreHorizontal } from 'lucide-react'
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -35,7 +34,7 @@ import {
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { FilterOption } from '@/components/dataTables/data-table-toolbar'
 
 // Local type matching our API response
 interface Product {
@@ -63,11 +62,41 @@ const ProductsList = () => {
     const [searchTerm, setSearchTerm] = useState('')
     const [selectedProducts, setSelectedProducts] = useState<string[]>([])
     const [isBulkDeleting, setIsBulkDeleting] = useState(false)
-    const [statusFilter, setStatusFilter] = useState<ProductStatus | 'ALL'>('ALL')
-    const [stockFilter, setStockFilter] = useState<'ALL' | 'IN_STOCK' | 'OUT_OF_STOCK' | 'LOW_STOCK'>('ALL')
-    const [sortBy, setSortBy] = useState<'name' | 'price' | 'stock' | 'updatedAt'>('updatedAt')
-    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+    const [activeFilters, setActiveFilters] = useState<Record<string, string>>({
+        status: 'ALL',
+        stock: 'ALL'
+    })
     const { currentStore } = useStore()
+
+    // Define filters
+    const filters: FilterOption[] = [
+        {
+            key: 'status',
+            label: 'Trạng thái',
+            type: 'select',
+            placeholder: 'Chọn trạng thái',
+            options: [
+                { value: 'ACTIVE', label: 'Đang bán' },
+                { value: 'DRAFT', label: 'Bản nháp' },
+                { value: 'PENDING_APPROVAL', label: 'Chờ duyệt' },
+                { value: 'INACTIVE', label: 'Không hoạt động' },
+                { value: 'OUT_OF_STOCK', label: 'Hết hàng' },
+                { value: 'DISCONTINUED', label: 'Ngừng bán' },
+                { value: 'REJECTED', label: 'Bị từ chối' }
+            ]
+        },
+        {
+            key: 'stock',
+            label: 'Tồn kho',
+            type: 'select',
+            placeholder: 'Chọn trạng thái tồn kho',
+            options: [
+                { value: 'IN_STOCK', label: 'Còn hàng' },
+                { value: 'OUT_OF_STOCK', label: 'Hết hàng' },
+                { value: 'LOW_STOCK', label: 'Tồn kho thấp' }
+            ]
+        }
+    ]
 
     useEffect(() => {
         const fetchProducts = async () => {
@@ -165,14 +194,7 @@ const ProductsList = () => {
         )
     }
 
-    const resetFilters = () => {
-        setSearchTerm('')
-        setStatusFilter('ALL')
-        setStockFilter('ALL')
-        setSortBy('updatedAt')
-        setSortOrder('desc')
-        setSelectedProducts([])
-    }
+    // Remove resetFilters function as it's no longer needed
 
     const handleExportCSV = () => {
         const headers = [
@@ -201,7 +223,7 @@ const ProductsList = () => {
         const link = document.createElement('a')
         const url = URL.createObjectURL(blob)
         link.setAttribute('href', url)
-        link.setAttribute('download', `products-${format(new Date(), 'yyyy-MM-dd')}.csv`)
+        link.setAttribute('download', `products_${format(new Date(), 'yyyy-MM-dd')}.csv`)
         link.style.visibility = 'hidden'
         document.body.appendChild(link)
         link.click()
@@ -211,21 +233,21 @@ const ProductsList = () => {
     const getStatusColor = (status: ProductStatus) => {
         switch (status) {
             case 'ACTIVE':
-                return 'default'
+                return 'bg-green-100 text-green-800'
             case 'DRAFT':
-                return 'secondary'
+                return 'bg-gray-100 text-gray-800'
             case 'PENDING_APPROVAL':
-                return 'secondary'
+                return 'bg-yellow-100 text-yellow-800'
             case 'INACTIVE':
-                return 'destructive'
+                return 'bg-red-100 text-red-800'
             case 'OUT_OF_STOCK':
-                return 'destructive'
+                return 'bg-orange-100 text-orange-800'
             case 'DISCONTINUED':
-                return 'destructive'
+                return 'bg-purple-100 text-purple-800'
             case 'REJECTED':
-                return 'destructive'
+                return 'bg-red-100 text-red-800'
             default:
-                return 'outline'
+                return 'bg-gray-100 text-gray-800'
         }
     }
 
@@ -250,12 +272,29 @@ const ProductsList = () => {
         }
     }
 
+    // Filter products (không sort thủ công nữa)
+    const filteredProducts = products
+        .filter(product => {
+            const matchesSearch = !searchTerm ||
+                product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (product.sku && product.sku.toLowerCase().includes(searchTerm.toLowerCase()))
+
+            const matchesStatus = activeFilters.status === 'ALL' || product.status === activeFilters.status
+
+            const matchesStock = activeFilters.stock === 'ALL' ||
+                (activeFilters.stock === 'IN_STOCK' && product.stock > 0) ||
+                (activeFilters.stock === 'OUT_OF_STOCK' && product.stock === 0) ||
+                (activeFilters.stock === 'LOW_STOCK' && product.stock > 0 && product.stock <= 10)
+
+            return matchesSearch && matchesStatus && matchesStock
+        })
+
     const columns: ColumnDef<Product>[] = [
         {
             id: 'select',
             header: () => (
                 <Checkbox
-                    checked={selectedProducts.length === filteredProducts.length}
+                    checked={selectedProducts.length === filteredProducts.length && filteredProducts.length > 0}
                     onCheckedChange={handleSelectAll}
                     aria-label="Select all"
                 />
@@ -271,18 +310,24 @@ const ProductsList = () => {
             enableHiding: false,
         },
         {
-            accessorKey: 'image',
-            header: 'Hình ảnh',
+            accessorKey: 'images',
+            header: 'Ảnh',
             cell: ({ row }) => {
-                const product = row.original
+                const images = row.original.images
                 return (
-                    <div className="relative w-16 h-16 rounded-lg overflow-hidden">
-                        <Image
-                            src={product.images[0] || '/images/logo.png'}
-                            alt={product.name}
-                            fill
-                            className="object-cover"
-                        />
+                    <div className="relative w-12 h-12 rounded-lg overflow-hidden">
+                        {images && images.length > 0 ? (
+                            <Image
+                                src={images[0]}
+                                alt={row.original.name}
+                                fill
+                                className="object-cover"
+                            />
+                        ) : (
+                            <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                                <span className="text-xs text-gray-500">No img</span>
+                            </div>
+                        )}
                     </div>
                 )
             },
@@ -290,194 +335,147 @@ const ProductsList = () => {
         {
             accessorKey: 'name',
             header: 'Tên sản phẩm',
-            cell: ({ row }) => {
-                const product = row.original
-                return (
-                    <div className="space-y-1">
-                        <p className="font-medium">{product.name}</p>
-                        <p className="text-sm text-muted-foreground">SKU: {product.sku || 'N/A'}</p>
-                        {product.category && (
-                            <Badge variant="outline" className="text-xs">
-                                {product.category.name}
-                            </Badge>
-                        )}
-                    </div>
-                )
-            },
+            cell: ({ row }) => (
+                <div className="flex flex-col">
+                    <span className="font-medium">{row.original.name}</span>
+                    {row.original.sku && (
+                        <span className="text-sm text-gray-500">SKU: {row.original.sku}</span>
+                    )}
+                </div>
+            ),
+        },
+        {
+            accessorKey: 'category',
+            header: 'Danh mục',
+            cell: ({ row }) => row.original.category?.name || "-",
         },
         {
             accessorKey: 'price',
             header: 'Giá',
-            cell: ({ row }) => {
-                const product = row.original
-                return (
-                    <div className="space-y-1">
-                        <p className="font-medium">
-                            {product.originalPrice.toLocaleString('vi-VN')}đ
-                        </p>
-                        {product.salePrice && (
-                            <p className="text-sm text-red-500">
-                                Sale: {product.salePrice.toLocaleString('vi-VN')}đ
-                            </p>
-                        )}
-                    </div>
-                )
-            },
+            cell: ({ row }) => (
+                <div className="flex flex-col">
+                    <span className="font-medium">
+                        {typeof row.original.originalPrice === 'number'
+                            ? row.original.originalPrice.toLocaleString('vi-VN') + 'đ'
+                            : '—'}
+                    </span>
+                    {row.original.salePrice && (
+                        <span className="text-sm text-red-500 line-through">
+                            {typeof row.original.salePrice === 'number'
+                                ? row.original.salePrice.toLocaleString('vi-VN') + 'đ'
+                                : '—'}
+                        </span>
+                    )}
+                </div>
+            ),
         },
         {
             accessorKey: 'stock',
-            header: 'Kho hàng',
-            cell: ({ row }) => {
-                const product = row.original
-                return (
-                    <div className="space-y-1">
-                        <p className="font-medium">Còn: {product.stock}</p>
-                        <p className="text-sm text-muted-foreground">
-                            Đã bán: {product.purchaseCount}
-                        </p>
-                    </div>
-                )
-            },
+            header: 'Tồn kho',
+            cell: ({ row }) => (
+                <Badge variant={row.original.stock > 0 ? "default" : "destructive"}>
+                    {row.original.stock}
+                </Badge>
+            ),
+        },
+        {
+            accessorKey: 'purchaseCount',
+            header: 'Đã bán',
+            cell: ({ row }) => row.original.purchaseCount,
         },
         {
             accessorKey: 'status',
             header: 'Trạng thái',
-            cell: ({ row }) => {
-                const status = row.getValue('status') as ProductStatus
-                return (
-                    <Badge variant={getStatusColor(status)}>
-                        {getStatusText(status)}
-                    </Badge>
-                )
-            },
+            cell: ({ row }) => (
+                <Badge className={getStatusColor(row.original.status)}>
+                    {getStatusText(row.original.status)}
+                </Badge>
+            ),
         },
         {
             accessorKey: 'updatedAt',
             header: 'Cập nhật',
-            cell: ({ row }) => {
-                const date = row.getValue('updatedAt') as string
-                return (
-                    <p className="text-sm">
-                        {format(new Date(date), 'dd/MM/yyyy', { locale: vi })}
-                    </p>
-                )
-            },
+            cell: ({ row }) => format(new Date(row.original.updatedAt), 'dd/MM/yyyy', { locale: vi }),
         },
         {
             id: 'actions',
-            header: 'Hành động',
-            cell: ({ row }) => {
-                const product = row.original
-                return (
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                                <span className="sr-only">Mở menu</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem asChild>
-                                <Link href={`/seller/products/${product.id}`}>
-                                    <Eye className="mr-2 h-4 w-4" />
-                                    Xem chi tiết
-                                </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                                <Link href={`/seller/products/${product.id}/edit`}>
-                                    <Edit className="mr-2 h-4 w-4" />
-                                    Chỉnh sửa
-                                </Link>
-                            </DropdownMenuItem>
-                            <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <DropdownMenuItem
-                                        className="text-red-600"
-                                        onSelect={(e) => e.preventDefault()}
-                                    >
-                                        <Trash2 className="mr-2 h-4 w-4" />
-                                        Xóa
-                                    </DropdownMenuItem>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle>Xác nhận xóa sản phẩm</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                            Bạn có chắc chắn muốn xóa sản phẩm &quot;{product.name}&quot;?
-                                            Hành động này không thể hoàn tác.
-                                        </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel>Hủy</AlertDialogCancel>
-                                        <AlertDialogAction
-                                            onClick={() => handleDelete(product.id)}
-                                            className="bg-red-600 hover:bg-red-700"
-                                        >
-                                            Xóa sản phẩm
-                                        </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                )
-            },
+            header: 'Thao tác',
+            cell: ({ row }) => (
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Open menu</span>
+                            <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuItem asChild>
+                            <Link href={`/seller/products/${row.original.id}`}>
+                                <Eye className="mr-2 h-4 w-4" />
+                                Xem chi tiết
+                            </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                            <Link href={`/seller/products/${row.original.id}/edit`}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Chỉnh sửa
+                            </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            onClick={() => handleDelete(row.original.id)}
+                            className="text-red-600"
+                        >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Xóa
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            ),
         },
     ]
 
-    const filteredProducts = products
-        .filter(product => {
-            const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                product.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                product.category?.name.toLowerCase().includes(searchTerm.toLowerCase())
+    // Handle search change
+    const handleSearchChange = (value: string) => {
+        setSearchTerm(value)
+    }
 
-            const matchesStatus = statusFilter === 'ALL' || product.status === statusFilter
+    // Handle filter change
+    const handleFilterChange = (key: string, value: string) => {
+        setActiveFilters(prev => ({
+            ...prev,
+            [key]: value
+        }))
+    }
 
-            const matchesStock = stockFilter === 'ALL' ||
-                (stockFilter === 'IN_STOCK' && product.stock > 0) ||
-                (stockFilter === 'OUT_OF_STOCK' && product.stock === 0) ||
-                (stockFilter === 'LOW_STOCK' && product.stock > 0 && product.stock <= 10)
-
-            return matchesSearch && matchesStatus && matchesStock
+    // Handle clear filters
+    const handleClearFilters = () => {
+        setActiveFilters({
+            status: 'ALL',
+            stock: 'ALL'
         })
-        .sort((a, b) => {
-            let aValue: number | string | Date, bValue: number | string | Date
+    }
 
-            switch (sortBy) {
-                case 'name':
-                    aValue = a.name.toLowerCase()
-                    bValue = b.name.toLowerCase()
-                    break
-                case 'price':
-                    aValue = a.originalPrice
-                    bValue = b.originalPrice
-                    break
-                case 'stock':
-                    aValue = a.stock
-                    bValue = b.stock
-                    break
-                case 'updatedAt':
-                default:
-                    aValue = new Date(a.updatedAt)
-                    bValue = new Date(b.updatedAt)
-                    break
+    // Handle export
+    const handleExport = () => {
+        handleExportCSV()
+    }
+
+    // Handle refresh
+    const handleRefresh = () => {
+        // Refetch products
+        const fetchProducts = async () => {
+            if (!currentStore) return
+
+            try {
+                const response = await api.get(`/seller/products?storeId=${currentStore.id}`)
+                setProducts(response.data.products || [])
+            } catch (error) {
+                console.error('Error fetching products:', error)
+                showError('Không thể tải danh sách sản phẩm')
             }
+        }
 
-            if (sortOrder === 'asc') {
-                return aValue > bValue ? 1 : -1
-            } else {
-                return aValue < bValue ? 1 : -1
-            }
-        })
-
-    if (isLoading) {
-        return (
-            <div className="space-y-6">
-                <div className="flex items-center justify-center h-64">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                </div>
-            </div>
-        )
+        fetchProducts()
     }
 
     return (
@@ -488,17 +486,10 @@ const ProductsList = () => {
                         <div>
                             <h1 className="text-2xl font-bold tracking-tight">Sản phẩm</h1>
                             <p className="text-muted-foreground">
-                                Quản lý sản phẩm trong cửa hàng của bạn
+                                Quản lý sản phẩm của cửa hàng
                             </p>
                         </div>
-                        <div className="flex items-center space-x-2">
-                            <Button
-                                variant="outline"
-                                onClick={resetFilters}
-                                disabled={!searchTerm && selectedProducts.length === 0}
-                            >
-                                Đặt lại
-                            </Button>
+                        <div className="flex items-center gap-2">
                             <Button variant="outline" asChild>
                                 <Link href="/seller/products/trash">
                                     <Trash2 className="mr-2 h-4 w-4" />
@@ -539,126 +530,9 @@ const ProductsList = () => {
                         </div>
                     </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                    {/* Search */}
-                    <div className="flex flex-col lg:flex-row items-start lg:items-center gap-4">
-                        <div className="relative flex-1 max-w-sm">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                            <Input
-                                placeholder="Tìm kiếm sản phẩm..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-10"
-                            />
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-2">
-                            {/* Status Filter */}
-                            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as ProductStatus | 'ALL')}>
-                                <SelectTrigger className="w-48">
-                                    <SelectValue placeholder="Lọc theo trạng thái" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="ALL">Tất cả trạng thái</SelectItem>
-                                    <SelectItem value="ACTIVE">Đang bán</SelectItem>
-                                    <SelectItem value="DRAFT">Bản nháp</SelectItem>
-                                    <SelectItem value="PENDING_APPROVAL">Chờ duyệt</SelectItem>
-                                    <SelectItem value="INACTIVE">Không hoạt động</SelectItem>
-                                    <SelectItem value="OUT_OF_STOCK">Hết hàng</SelectItem>
-                                    <SelectItem value="DISCONTINUED">Ngừng bán</SelectItem>
-                                    <SelectItem value="REJECTED">Bị từ chối</SelectItem>
-                                </SelectContent>
-                            </Select>
-
-                            {/* Stock Filter */}
-                            <Select value={stockFilter} onValueChange={(value) => setStockFilter(value as 'ALL' | 'IN_STOCK' | 'OUT_OF_STOCK' | 'LOW_STOCK')}>
-                                <SelectTrigger className="w-48">
-                                    <SelectValue placeholder="Lọc theo tồn kho" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="ALL">Tất cả tồn kho</SelectItem>
-                                    <SelectItem value="IN_STOCK">Còn hàng</SelectItem>
-                                    <SelectItem value="OUT_OF_STOCK">Hết hàng</SelectItem>
-                                    <SelectItem value="LOW_STOCK">Tồn kho thấp</SelectItem>
-                                </SelectContent>
-                            </Select>
-
-                            {/* Sort Options */}
-                            <div className="flex items-center gap-2">
-                                <Select value={sortBy} onValueChange={(value) => setSortBy(value as typeof sortBy)}>
-                                    <SelectTrigger className="w-40">
-                                        <SelectValue placeholder="Sắp xếp theo" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="updatedAt">Ngày cập nhật</SelectItem>
-                                        <SelectItem value="name">Tên sản phẩm</SelectItem>
-                                        <SelectItem value="price">Giá</SelectItem>
-                                        <SelectItem value="stock">Tồn kho</SelectItem>
-                                    </SelectContent>
-                                </Select>
-
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                                >
-                                    {sortOrder === 'asc' ? '↑' : '↓'}
-                                </Button>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                            {selectedProducts.length > 0 && (
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button variant="destructive" disabled={isBulkDeleting}>
-                                            {isBulkDeleting ? 'Đang xóa...' : `Xóa ${selectedProducts.length} sản phẩm`}
-                                        </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>Xác nhận xóa sản phẩm</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                                Bạn có chắc chắn muốn xóa {selectedProducts.length} sản phẩm đã chọn?
-                                                Hành động này không thể hoàn tác.
-                                            </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel>Hủy</AlertDialogCancel>
-                                            <AlertDialogAction
-                                                onClick={handleBulkDelete}
-                                                className="bg-red-600 hover:bg-red-700"
-                                            >
-                                                Xóa sản phẩm
-                                            </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
-                            )}
-
-                            <Button variant="outline" onClick={handleExportCSV}>
-                                <Download className="w-4 h-4 mr-2" />
-                                Xuất CSV
-                            </Button>
-
-                            {/* Reset Filters */}
-                            {(searchTerm || statusFilter !== 'ALL' || stockFilter !== 'ALL' || sortBy !== 'updatedAt' || sortOrder !== 'desc') && (
-                                <Button variant="ghost" onClick={resetFilters} size="sm">
-                                    Xóa bộ lọc
-                                </Button>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Filter Results Info */}
-                    {(searchTerm || statusFilter !== 'ALL' || stockFilter !== 'ALL') && (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <span>Hiển thị {filteredProducts.length} trong tổng số {products.length} sản phẩm</span>
-                        </div>
-                    )}
-
+                <CardContent>
                     {/* Stats */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                         <div className="p-4 bg-secondary/10 rounded-lg">
                             <p className="text-sm font-medium text-muted-foreground">Tổng sản phẩm</p>
                             <p className="text-2xl font-bold">{products.length}</p>
@@ -688,6 +562,17 @@ const ProductsList = () => {
                         columns={columns}
                         data={filteredProducts}
                         searchKey="name"
+                        searchPlaceholder="Tìm kiếm sản phẩm..."
+                        isLoading={isLoading}
+                        emptyMessage="Không có sản phẩm nào."
+                        filters={filters}
+                        activeFilters={activeFilters}
+                        onFilterChange={handleFilterChange}
+                        onClearFilters={handleClearFilters}
+                        onSearchChange={handleSearchChange}
+                        onExport={handleExport}
+                        onRefresh={handleRefresh}
+                        showToolbar={true}
                     />
                 </CardContent>
             </Card>

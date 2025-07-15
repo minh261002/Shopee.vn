@@ -1,25 +1,27 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Clock, Target, Zap, Download, Eye, Edit, Package, Trash2 } from 'lucide-react';
+import { Plus, Clock, Target, Zap, Eye, Edit, Package, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/dataTables/data-table';
 import { DataTableRowActions } from '@/components/dataTables/data-table-row-actions';
 import { ColumnDef } from '@tanstack/react-table';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { api } from '@/lib/axios';
 import type { FlashSale, FlashSalesResponse } from '@/types/flash-sale';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
+import { FilterOption } from '@/components/dataTables/data-table-toolbar';
 
 const FlashSalesPage = () => {
     const [flashSales, setFlashSales] = useState<FlashSale[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [statusFilter, setStatusFilter] = useState<string>('ALL');
+    const [activeFilters, setActiveFilters] = useState<Record<string, string>>({
+        status: 'ALL'
+    });
     const [pagination, setPagination] = useState({
         page: 1,
         limit: 10,
@@ -27,6 +29,22 @@ const FlashSalesPage = () => {
         totalPages: 0,
     });
     const router = useRouter();
+
+    // Define filters
+    const filters: FilterOption[] = [
+        {
+            key: 'status',
+            label: 'Trạng thái',
+            type: 'select',
+            placeholder: 'Chọn trạng thái',
+            options: [
+                { value: 'UPCOMING', label: 'Sắp diễn ra' },
+                { value: 'ACTIVE', label: 'Đang diễn ra' },
+                { value: 'ENDED', label: 'Đã kết thúc' },
+                { value: 'CANCELLED', label: 'Đã hủy' }
+            ]
+        }
+    ];
 
     // Fetch flash sales
     const fetchFlashSales = async (page = 1, status = '') => {
@@ -51,15 +69,40 @@ const FlashSalesPage = () => {
     };
 
     useEffect(() => {
-        fetchFlashSales(1, statusFilter);
-    }, [statusFilter]);
+        fetchFlashSales(1, activeFilters.status);
+    }, [activeFilters]);
+
+    // Handle filter change
+    const handleFilterChange = (key: string, value: string) => {
+        setActiveFilters(prev => ({
+            ...prev,
+            [key]: value
+        }));
+    };
+
+    // Handle clear filters
+    const handleClearFilters = () => {
+        setActiveFilters({
+            status: 'ALL'
+        });
+    };
+
+    // Handle export
+    const handleExport = () => {
+        toast.info('Tính năng xuất CSV sẽ được thêm sau');
+    };
+
+    // Handle refresh
+    const handleRefresh = () => {
+        fetchFlashSales(1, activeFilters.status);
+    };
 
     // Handle delete
     const handleDelete = async (flashSale: FlashSale) => {
         try {
             await api.delete(`/admin/flash-sales/${flashSale.id}`);
             toast.success('Xóa chương trình khuyến mãi thành công');
-            fetchFlashSales(1, statusFilter);
+            fetchFlashSales(1, activeFilters.status);
         } catch (error) {
             console.error('Error deleting flash sale:', error);
             toast.error('Lỗi khi xóa chương trình khuyến mãi');
@@ -74,12 +117,6 @@ const FlashSalesPage = () => {
     // Handle add new
     const handleAddNew = () => {
         router.push('/admin/flash-sales/new');
-    };
-
-    // Handle export
-    const handleExport = () => {
-        // TODO: Implement CSV export
-        toast.info('Tính năng xuất CSV sẽ được thêm sau');
     };
 
     const getStatusBadge = (flashSale: FlashSale) => {
@@ -263,6 +300,7 @@ const FlashSalesPage = () => {
         },
         {
             id: "actions",
+            header: "Thao tác",
             cell: ({ row }) => (
                 <DataTableRowActions
                     row={row}
@@ -373,29 +411,7 @@ const FlashSalesPage = () => {
                         Quản lý tất cả chương trình khuyến mãi
                     </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                    {/* Filters */}
-                    <div className="flex flex-col lg:flex-row items-start lg:items-center gap-4">
-                        <div className="flex gap-2">
-                            <Select value={statusFilter} onValueChange={setStatusFilter}>
-                                <SelectTrigger className="w-[180px]">
-                                    <SelectValue placeholder="Trạng thái" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="ALL">Tất cả trạng thái</SelectItem>
-                                    <SelectItem value="UPCOMING">Sắp diễn ra</SelectItem>
-                                    <SelectItem value="ACTIVE">Đang diễn ra</SelectItem>
-                                    <SelectItem value="ENDED">Đã kết thúc</SelectItem>
-                                    <SelectItem value="CANCELLED">Đã hủy</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <Button variant="outline" onClick={handleExport}>
-                                <Download className="h-4 w-4 mr-2" />
-                                Xuất CSV
-                            </Button>
-                        </div>
-                    </div>
-
+                <CardContent>
                     <DataTable
                         columns={columns}
                         data={flashSales}
@@ -403,6 +419,13 @@ const FlashSalesPage = () => {
                         searchPlaceholder="Tìm kiếm chương trình khuyến mãi..."
                         isLoading={isLoading}
                         emptyMessage="Không có chương trình khuyến mãi nào."
+                        filters={filters}
+                        activeFilters={activeFilters}
+                        onFilterChange={handleFilterChange}
+                        onClearFilters={handleClearFilters}
+                        onExport={handleExport}
+                        onRefresh={handleRefresh}
+                        showToolbar={true}
                     />
                 </CardContent>
             </Card>

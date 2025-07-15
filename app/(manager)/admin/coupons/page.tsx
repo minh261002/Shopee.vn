@@ -1,27 +1,29 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Calendar, Target, Users, Ticket, Download } from 'lucide-react';
+import { Plus, Calendar, Target, Users, Ticket } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/dataTables/data-table';
 import { DataTableRowActions } from '@/components/dataTables/data-table-row-actions';
 import { ColumnDef } from '@tanstack/react-table';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { api } from '@/lib/axios';
 import type { Coupon, CouponsResponse } from '@/types/coupon';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
+import { FilterOption } from '@/components/dataTables/data-table-toolbar';
 
 const CouponsPage = () => {
     const [coupons, setCoupons] = useState<Coupon[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [typeFilter, setTypeFilter] = useState<string>('ALL');
-    const [scopeFilter, setScopeFilter] = useState<string>('ALL');
-    const [statusFilter, setStatusFilter] = useState<string>('ALL');
+    const [activeFilters, setActiveFilters] = useState<Record<string, string>>({
+        type: 'ALL',
+        scope: 'ALL',
+        status: 'ALL'
+    });
     const [pagination, setPagination] = useState({
         page: 1,
         limit: 10,
@@ -29,6 +31,46 @@ const CouponsPage = () => {
         totalPages: 0,
     });
     const router = useRouter();
+
+    // Define filters
+    const filters: FilterOption[] = [
+        {
+            key: 'type',
+            label: 'Loại coupon',
+            type: 'select',
+            placeholder: 'Chọn loại coupon',
+            options: [
+                { value: 'PERCENTAGE', label: 'Phần trăm' },
+                { value: 'FIXED_AMOUNT', label: 'Số tiền cố định' },
+                { value: 'FREE_SHIPPING', label: 'Miễn phí vận chuyển' },
+                { value: 'CASHBACK', label: 'Hoàn tiền' }
+            ]
+        },
+        {
+            key: 'scope',
+            label: 'Phạm vi',
+            type: 'select',
+            placeholder: 'Chọn phạm vi',
+            options: [
+                { value: 'PLATFORM_WIDE', label: 'Toàn platform' },
+                { value: 'CATEGORY', label: 'Danh mục' },
+                { value: 'BRAND', label: 'Thương hiệu' },
+                { value: 'FIRST_ORDER', label: 'Đơn hàng đầu' },
+                { value: 'NEW_USER', label: 'User mới' }
+            ]
+        },
+        {
+            key: 'status',
+            label: 'Trạng thái',
+            type: 'select',
+            placeholder: 'Chọn trạng thái',
+            options: [
+                { value: 'ACTIVE', label: 'Đang hoạt động' },
+                { value: 'INACTIVE', label: 'Tạm ngưng' },
+                { value: 'EXPIRED', label: 'Hết hạn' }
+            ]
+        }
+    ];
 
     // Fetch coupons
     const fetchCoupons = async (page = 1, type = '', scope = '', status = '') => {
@@ -55,15 +97,42 @@ const CouponsPage = () => {
     };
 
     useEffect(() => {
-        fetchCoupons(1, typeFilter, scopeFilter, statusFilter);
-    }, [typeFilter, scopeFilter, statusFilter]);
+        fetchCoupons(1, activeFilters.type, activeFilters.scope, activeFilters.status);
+    }, [activeFilters]);
+
+    // Handle filter change
+    const handleFilterChange = (key: string, value: string) => {
+        setActiveFilters(prev => ({
+            ...prev,
+            [key]: value
+        }));
+    };
+
+    // Handle clear filters
+    const handleClearFilters = () => {
+        setActiveFilters({
+            type: 'ALL',
+            scope: 'ALL',
+            status: 'ALL'
+        });
+    };
+
+    // Handle export
+    const handleExport = () => {
+        toast.info('Tính năng xuất CSV sẽ được thêm sau');
+    };
+
+    // Handle refresh
+    const handleRefresh = () => {
+        fetchCoupons(1, activeFilters.type, activeFilters.scope, activeFilters.status);
+    };
 
     // Handle delete
     const handleDelete = async (coupon: Coupon) => {
         try {
             await api.delete(`/admin/coupons/${coupon.id}`);
             toast.success('Xóa coupon thành công');
-            fetchCoupons(1, typeFilter, scopeFilter, statusFilter);
+            fetchCoupons(1, activeFilters.type, activeFilters.scope, activeFilters.status);
         } catch (error) {
             console.error('Error deleting coupon:', error);
             toast.error('Lỗi khi xóa coupon');
@@ -78,12 +147,6 @@ const CouponsPage = () => {
     // Handle add new
     const handleAddNew = () => {
         router.push('/admin/coupons/new');
-    };
-
-    // Handle export
-    const handleExport = () => {
-        // TODO: Implement CSV export
-        toast.info('Tính năng xuất CSV sẽ được thêm sau');
     };
 
     const getTypeLabel = (type: string) => {
@@ -211,6 +274,7 @@ const CouponsPage = () => {
         },
         {
             id: "actions",
+            header: "Thao tác",
             cell: ({ row }) => (
                 <DataTableRowActions
                     row={row}
@@ -313,53 +377,7 @@ const CouponsPage = () => {
                         Quản lý tất cả mã giảm giá và khuyến mãi
                     </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                    {/* Filters */}
-                    <div className="flex flex-col lg:flex-row items-start lg:items-center gap-4">
-                        <div className="flex gap-2">
-                            <Select value={typeFilter} onValueChange={setTypeFilter}>
-                                <SelectTrigger className="w-[180px]">
-                                    <SelectValue placeholder="Loại coupon" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="ALL">Tất cả loại</SelectItem>
-                                    <SelectItem value="PERCENTAGE">Phần trăm</SelectItem>
-                                    <SelectItem value="FIXED_AMOUNT">Số tiền cố định</SelectItem>
-                                    <SelectItem value="FREE_SHIPPING">Miễn phí vận chuyển</SelectItem>
-                                    <SelectItem value="CASHBACK">Hoàn tiền</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <Select value={scopeFilter} onValueChange={setScopeFilter}>
-                                <SelectTrigger className="w-[180px]">
-                                    <SelectValue placeholder="Phạm vi" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="ALL">Tất cả phạm vi</SelectItem>
-                                    <SelectItem value="PLATFORM_WIDE">Toàn platform</SelectItem>
-                                    <SelectItem value="CATEGORY">Danh mục</SelectItem>
-                                    <SelectItem value="BRAND">Thương hiệu</SelectItem>
-                                    <SelectItem value="FIRST_ORDER">Đơn hàng đầu</SelectItem>
-                                    <SelectItem value="NEW_USER">User mới</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <Select value={statusFilter} onValueChange={setStatusFilter}>
-                                <SelectTrigger className="w-[180px]">
-                                    <SelectValue placeholder="Trạng thái" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="ALL">Tất cả trạng thái</SelectItem>
-                                    <SelectItem value="ACTIVE">Đang hoạt động</SelectItem>
-                                    <SelectItem value="INACTIVE">Tạm ngưng</SelectItem>
-                                    <SelectItem value="EXPIRED">Hết hạn</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <Button variant="outline" onClick={handleExport}>
-                                <Download className="h-4 w-4 mr-2" />
-                                Xuất CSV
-                            </Button>
-                        </div>
-                    </div>
-
+                <CardContent>
                     <DataTable
                         columns={columns}
                         data={coupons}
@@ -367,6 +385,13 @@ const CouponsPage = () => {
                         searchPlaceholder="Tìm kiếm coupon..."
                         isLoading={isLoading}
                         emptyMessage="Không có coupon nào."
+                        filters={filters}
+                        activeFilters={activeFilters}
+                        onFilterChange={handleFilterChange}
+                        onClearFilters={handleClearFilters}
+                        onExport={handleExport}
+                        onRefresh={handleRefresh}
+                        showToolbar={true}
                     />
                 </CardContent>
             </Card>

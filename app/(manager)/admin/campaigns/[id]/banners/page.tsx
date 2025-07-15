@@ -14,6 +14,7 @@ import { api } from '@/lib/axios';
 import type { ContentBlock } from '@/types/banner';
 import type { Campaign } from '@/types/campaign';
 import Image from 'next/image';
+import { FilterOption } from '@/components/dataTables/data-table-toolbar';
 
 const CampaignBannersPage = () => {
     const router = useRouter();
@@ -21,6 +22,67 @@ const CampaignBannersPage = () => {
     const [campaign, setCampaign] = useState<Campaign | null>(null);
     const [banners, setBanners] = useState<ContentBlock[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [activeFilters, setActiveFilters] = useState<Record<string, string>>({
+        status: 'ALL',
+        type: 'ALL',
+        position: 'ALL'
+    });
+
+    // Define filters
+    const filters: FilterOption[] = [
+        {
+            key: 'status',
+            label: 'Trạng thái',
+            type: 'select',
+            placeholder: 'Chọn trạng thái',
+            options: [
+                { value: 'PUBLISHED', label: 'Đã xuất bản' },
+                { value: 'DRAFT', label: 'Bản nháp' },
+                { value: 'SCHEDULED', label: 'Đã lên lịch' },
+                { value: 'PAUSED', label: 'Tạm dừng' },
+                { value: 'ARCHIVED', label: 'Đã lưu trữ' }
+            ]
+        },
+        {
+            key: 'type',
+            label: 'Loại banner',
+            type: 'select',
+            placeholder: 'Chọn loại',
+            options: [
+                { value: 'HERO_BANNER', label: 'Banner chính' },
+                { value: 'FLASH_SALE_BANNER', label: 'Flash Sale' },
+                { value: 'CATEGORY_BANNER', label: 'Danh mục' },
+                { value: 'BRAND_BANNER', label: 'Thương hiệu' },
+                { value: 'PRODUCT_BANNER', label: 'Sản phẩm' },
+                { value: 'PROMOTION_BANNER', label: 'Khuyến mãi' },
+                { value: 'SEASONAL_BANNER', label: 'Theo mùa' },
+                { value: 'SIDEBAR_BANNER', label: 'Sidebar' },
+                { value: 'CHECKOUT_BANNER', label: 'Thanh toán' },
+                { value: 'CART_BANNER', label: 'Giỏ hàng' },
+                { value: 'SEARCH_BANNER', label: 'Tìm kiếm' }
+            ]
+        },
+        {
+            key: 'position',
+            label: 'Vị trí',
+            type: 'select',
+            placeholder: 'Chọn vị trí',
+            options: [
+                { value: 'HOMEPAGE_HERO', label: 'Trang chủ - Hero' },
+                { value: 'HOMEPAGE_FEATURED', label: 'Trang chủ - Nổi bật' },
+                { value: 'HOMEPAGE_SIDEBAR', label: 'Trang chủ - Sidebar' },
+                { value: 'CATEGORY_HEADER', label: 'Danh mục - Header' },
+                { value: 'CATEGORY_SIDEBAR', label: 'Danh mục - Sidebar' },
+                { value: 'PRODUCT_DETAIL_TOP', label: 'Sản phẩm - Top' },
+                { value: 'PRODUCT_DETAIL_SIDEBAR', label: 'Sản phẩm - Sidebar' },
+                { value: 'CHECKOUT_PAGE', label: 'Thanh toán' },
+                { value: 'CART_PAGE', label: 'Giỏ hàng' },
+                { value: 'SEARCH_RESULTS', label: 'Kết quả tìm kiếm' },
+                { value: 'FLASH_SALE_PAGE', label: 'Flash Sale' },
+                { value: 'BRAND_PAGE', label: 'Thương hiệu' }
+            ]
+        }
+    ];
 
     useEffect(() => {
         const fetchData = async () => {
@@ -45,6 +107,42 @@ const CampaignBannersPage = () => {
             fetchData();
         }
     }, [params.id]);
+
+    // Handle filter change
+    const handleFilterChange = (key: string, value: string) => {
+        setActiveFilters(prev => ({
+            ...prev,
+            [key]: value
+        }));
+    };
+
+    // Handle clear filters
+    const handleClearFilters = () => {
+        setActiveFilters({
+            status: 'ALL',
+            type: 'ALL',
+            position: 'ALL'
+        });
+    };
+
+    // Handle export
+    const handleExport = () => {
+        toast.info('Tính năng xuất dữ liệu đang được phát triển');
+    };
+
+    // Handle refresh
+    const handleRefresh = async () => {
+        try {
+            setIsLoading(true);
+            const response = await api.get(`/admin/banners?campaignId=${params.id}&limit=100`);
+            setBanners(response.data.banners);
+        } catch (error) {
+            console.error('Error refreshing data:', error);
+            toast.error('Lỗi khi làm mới dữ liệu');
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const handleAddBanner = () => {
         router.push(`/admin/banners/new?campaignId=${params.id}`);
@@ -334,9 +432,17 @@ const CampaignBannersPage = () => {
                     <DataTable
                         columns={columns}
                         data={banners}
-                        isLoading={isLoading}
+                        searchKey="title"
                         searchPlaceholder="Tìm kiếm banner..."
+                        isLoading={isLoading}
                         emptyMessage="Chưa có banner nào trong chiến dịch này."
+                        filters={filters}
+                        activeFilters={activeFilters}
+                        onFilterChange={handleFilterChange}
+                        onClearFilters={handleClearFilters}
+                        onExport={handleExport}
+                        onRefresh={handleRefresh}
+                        showToolbar={true}
                     />
                 </CardContent>
             </Card>

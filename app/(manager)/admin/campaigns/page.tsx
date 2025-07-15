@@ -14,10 +14,16 @@ import { api } from '@/lib/axios';
 import type { Campaign, CampaignsResponse } from '@/types/campaign';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
+import { FilterOption } from '@/components/dataTables/data-table-toolbar';
 
 const CampaignsPage = () => {
     const [campaigns, setCampaigns] = useState<Campaign[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [activeFilters, setActiveFilters] = useState<Record<string, string>>({
+        status: 'ALL',
+        campaignType: 'ALL',
+        targetAudience: 'ALL'
+    });
     const [pagination, setPagination] = useState({
         page: 1,
         limit: 10,
@@ -25,6 +31,51 @@ const CampaignsPage = () => {
         totalPages: 0,
     });
     const router = useRouter();
+
+    // Define filters
+    const filters: FilterOption[] = [
+        {
+            key: 'status',
+            label: 'Trạng thái',
+            type: 'select',
+            placeholder: 'Chọn trạng thái',
+            options: [
+                { value: 'PUBLISHED', label: 'Đã xuất bản' },
+                { value: 'DRAFT', label: 'Bản nháp' },
+                { value: 'SCHEDULED', label: 'Đã lên lịch' },
+                { value: 'PAUSED', label: 'Tạm dừng' },
+                { value: 'ARCHIVED', label: 'Đã lưu trữ' },
+                { value: 'EXPIRED', label: 'Hết hạn' }
+            ]
+        },
+        {
+            key: 'campaignType',
+            label: 'Loại chiến dịch',
+            type: 'select',
+            placeholder: 'Chọn loại',
+            options: [
+                { value: 'FLASH_SALE', label: 'Flash Sale' },
+                { value: 'SEASONAL', label: 'Theo mùa' },
+                { value: 'BRAND', label: 'Thương hiệu' }
+            ]
+        },
+        {
+            key: 'targetAudience',
+            label: 'Đối tượng',
+            type: 'select',
+            placeholder: 'Chọn đối tượng',
+            options: [
+                { value: 'ALL_USERS', label: 'Tất cả người dùng' },
+                { value: 'NEW_USERS', label: 'Người dùng mới' },
+                { value: 'RETURNING_USERS', label: 'Người dùng quay lại' },
+                { value: 'PREMIUM_USERS', label: 'Người dùng cao cấp' },
+                { value: 'MOBILE_USERS', label: 'Người dùng mobile' },
+                { value: 'DESKTOP_USERS', label: 'Người dùng desktop' },
+                { value: 'SPECIFIC_LOCATION', label: 'Vị trí cụ thể' },
+                { value: 'SPECIFIC_DEVICE', label: 'Thiết bị cụ thể' }
+            ]
+        }
+    ];
 
     // Fetch campaigns
     const fetchCampaigns = async (page = 1, search = '') => {
@@ -51,6 +102,33 @@ const CampaignsPage = () => {
     useEffect(() => {
         fetchCampaigns();
     }, []);
+
+    // Handle filter change
+    const handleFilterChange = (key: string, value: string) => {
+        setActiveFilters(prev => ({
+            ...prev,
+            [key]: value
+        }));
+    };
+
+    // Handle clear filters
+    const handleClearFilters = () => {
+        setActiveFilters({
+            status: 'ALL',
+            campaignType: 'ALL',
+            targetAudience: 'ALL'
+        });
+    };
+
+    // Handle export
+    const handleExport = () => {
+        toast.info('Tính năng xuất dữ liệu đang được phát triển');
+    };
+
+    // Handle refresh
+    const handleRefresh = () => {
+        fetchCampaigns();
+    };
 
     // Handle delete
     const handleDelete = async (campaign: Campaign) => {
@@ -365,6 +443,13 @@ const CampaignsPage = () => {
                         searchPlaceholder="Tìm kiếm chiến dịch..."
                         isLoading={isLoading}
                         emptyMessage="Không có chiến dịch nào."
+                        filters={filters}
+                        activeFilters={activeFilters}
+                        onFilterChange={handleFilterChange}
+                        onClearFilters={handleClearFilters}
+                        onExport={handleExport}
+                        onRefresh={handleRefresh}
+                        showToolbar={true}
                     />
                 </CardContent>
             </Card>

@@ -14,12 +14,31 @@ import { api } from '@/lib/axios';
 import type { Affiliate, AffiliatesResponse } from '@/types/affiliate';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
+import { FilterOption } from '@/components/dataTables/data-table-toolbar';
 
 const AffiliatesPage = () => {
     const [affiliates, setAffiliates] = useState<Affiliate[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [statusFilter, setStatusFilter] = useState<string>('ALL');
+    const [activeFilters, setActiveFilters] = useState<Record<string, string>>({
+        status: 'ALL'
+    });
     const router = useRouter();
+
+    // Define filters
+    const filters: FilterOption[] = [
+        {
+            key: 'status',
+            label: 'Trạng thái',
+            type: 'select',
+            placeholder: 'Chọn trạng thái',
+            options: [
+                { value: 'PENDING', label: 'Chờ phê duyệt' },
+                { value: 'APPROVED', label: 'Đã phê duyệt' },
+                { value: 'SUSPENDED', label: 'Đã tạm ngưng' },
+                { value: 'REJECTED', label: 'Đã từ chối' }
+            ]
+        }
+    ];
 
     // Fetch affiliates
     const fetchAffiliates = async (page = 1, status = '') => {
@@ -43,15 +62,40 @@ const AffiliatesPage = () => {
     };
 
     useEffect(() => {
-        fetchAffiliates(1, statusFilter);
-    }, [statusFilter]);
+        fetchAffiliates(1, activeFilters.status);
+    }, [activeFilters]);
+
+    // Handle filter change
+    const handleFilterChange = (key: string, value: string) => {
+        setActiveFilters(prev => ({
+            ...prev,
+            [key]: value
+        }));
+    };
+
+    // Handle clear filters
+    const handleClearFilters = () => {
+        setActiveFilters({
+            status: 'ALL'
+        });
+    };
+
+    // Handle export
+    const handleExport = () => {
+        toast.info('Tính năng xuất dữ liệu đang được phát triển');
+    };
+
+    // Handle refresh
+    const handleRefresh = () => {
+        fetchAffiliates(1, activeFilters.status);
+    };
 
     // Handle delete
     const handleDelete = async (affiliate: Affiliate) => {
         try {
             await api.delete(`/admin/affiliates/${affiliate.id}`);
             toast.success('Xóa affiliate thành công');
-            fetchAffiliates(1, statusFilter);
+            fetchAffiliates(1, activeFilters.status);
         } catch (error) {
             console.error('Error deleting affiliate:', error);
             toast.error('Lỗi khi xóa affiliate');
@@ -73,7 +117,7 @@ const AffiliatesPage = () => {
         try {
             await api.put(`/admin/affiliates/${affiliate.id}/approve`);
             toast.success('Phê duyệt affiliate thành công');
-            fetchAffiliates(1, statusFilter);
+            fetchAffiliates(1, activeFilters.status);
         } catch (error) {
             console.error('Error approving affiliate:', error);
             toast.error('Lỗi khi phê duyệt affiliate');
@@ -85,7 +129,7 @@ const AffiliatesPage = () => {
         try {
             await api.put(`/admin/affiliates/${affiliate.id}/reject`);
             toast.success('Từ chối affiliate thành công');
-            fetchAffiliates(1, statusFilter);
+            fetchAffiliates(1, activeFilters.status);
         } catch (error) {
             console.error('Error rejecting affiliate:', error);
             toast.error('Lỗi khi từ chối affiliate');
@@ -99,7 +143,7 @@ const AffiliatesPage = () => {
                 reason: 'Tạm ngưng theo yêu cầu của admin'
             });
             toast.success('Tạm ngưng affiliate thành công');
-            fetchAffiliates(1, statusFilter);
+            fetchAffiliates(1, activeFilters.status);
         } catch (error) {
             console.error('Error suspending affiliate:', error);
             toast.error('Lỗi khi tạm ngưng affiliate');
@@ -111,7 +155,7 @@ const AffiliatesPage = () => {
         try {
             await api.put(`/admin/affiliates/${affiliate.id}/reactivate`);
             toast.success('Kích hoạt lại affiliate thành công');
-            fetchAffiliates(1, statusFilter);
+            fetchAffiliates(1, activeFilters.status);
         } catch (error) {
             console.error('Error reactivating affiliate:', error);
             toast.error('Lỗi khi kích hoạt lại affiliate');
@@ -205,6 +249,7 @@ const AffiliatesPage = () => {
         },
         {
             id: "actions",
+            header: "Thao tác",
             cell: ({ row }) => {
                 const affiliate = row.original;
                 const actions = [
@@ -321,21 +366,6 @@ const AffiliatesPage = () => {
                 </Card>
             </div>
 
-            {/* Filters */}
-            <div className="flex items-center space-x-2">
-                <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="border border-input bg-background px-3 py-2 text-sm rounded-md"
-                >
-                    <option value="ALL">Tất cả trạng thái</option>
-                    <option value="PENDING">Chờ phê duyệt</option>
-                    <option value="APPROVED">Đã phê duyệt</option>
-                    <option value="SUSPENDED">Đã tạm ngưng</option>
-                    <option value="REJECTED">Đã từ chối</option>
-                </select>
-            </div>
-
             {/* Data Table */}
             <Card>
                 <CardHeader>
@@ -348,7 +378,17 @@ const AffiliatesPage = () => {
                     <DataTable
                         columns={columns}
                         data={affiliates}
+                        searchKey="user"
+                        searchPlaceholder="Tìm kiếm affiliate..."
                         isLoading={isLoading}
+                        emptyMessage="Không có affiliate nào."
+                        filters={filters}
+                        activeFilters={activeFilters}
+                        onFilterChange={handleFilterChange}
+                        onClearFilters={handleClearFilters}
+                        onExport={handleExport}
+                        onRefresh={handleRefresh}
+                        showToolbar={true}
                     />
                 </CardContent>
             </Card>

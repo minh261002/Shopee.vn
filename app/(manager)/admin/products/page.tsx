@@ -4,9 +4,8 @@ import React, { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { DataTable } from '@/components/dataTables/data-table'
-import { Package, Search, Eye, CheckCircle, XCircle, MoreHorizontal } from 'lucide-react'
+import { Package, Eye, CheckCircle, XCircle, MoreHorizontal } from 'lucide-react'
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -19,6 +18,7 @@ import { api } from '@/lib/axios'
 import { useToast } from '@/hooks/use-toast'
 import { ProductStatus } from '@prisma/client'
 import { useSearchParams } from 'next/navigation'
+import { FilterOption } from '@/components/dataTables/data-table-toolbar'
 
 interface Product {
     id: string
@@ -52,7 +52,9 @@ const AdminProductsPage = () => {
     const [products, setProducts] = useState<Product[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [searchTerm, setSearchTerm] = useState('')
-    const [statusFilter, setStatusFilter] = useState<ProductStatus | 'ALL'>('ALL')
+    const [activeFilters, setActiveFilters] = useState<Record<string, string>>({
+        status: 'ALL'
+    })
     const [pagination, setPagination] = useState({
         page: 1,
         limit: 10,
@@ -66,23 +68,39 @@ const AdminProductsPage = () => {
         draft: 0,
     })
 
+    // Define filters
+    const filters: FilterOption[] = [
+        {
+            key: 'status',
+            label: 'Trạng thái',
+            type: 'select',
+            placeholder: 'Chọn trạng thái',
+            options: [
+                { value: 'PENDING_APPROVAL', label: 'Chờ duyệt' },
+                { value: 'ACTIVE', label: 'Đang bán' },
+                { value: 'DRAFT', label: 'Bản nháp' },
+                { value: 'INACTIVE', label: 'Đã ẩn' }
+            ]
+        }
+    ]
+
     // Initialize status filter from URL params
     useEffect(() => {
         const statusParam = searchParams.get('status')
         console.log('URL status param:', statusParam)
         if (statusParam) {
-            setStatusFilter(statusParam as ProductStatus | 'ALL')
+            setActiveFilters(prev => ({ ...prev, status: statusParam }))
             // Reset pagination when filter changes
             setPagination(prev => ({ ...prev, page: 1 }))
         } else {
-            setStatusFilter('ALL')
+            setActiveFilters(prev => ({ ...prev, status: 'ALL' }))
         }
     }, [searchParams])
 
     useEffect(() => {
-        console.log('Status filter changed to:', statusFilter)
+        console.log('Status filter changed to:', activeFilters.status)
         fetchProducts()
-    }, [statusFilter, pagination.page])
+    }, [activeFilters, pagination.page])
 
     // Add search effect
     useEffect(() => {
@@ -102,8 +120,8 @@ const AdminProductsPage = () => {
             })
 
             // Add status filter if not ALL
-            if (statusFilter && statusFilter !== 'ALL') {
-                params.append('status', statusFilter)
+            if (activeFilters.status && activeFilters.status !== 'ALL') {
+                params.append('status', activeFilters.status)
             }
 
             // Add search term if exists
@@ -112,7 +130,7 @@ const AdminProductsPage = () => {
             }
 
             console.log('Fetching products with params:', params.toString())
-            console.log('Status filter:', statusFilter)
+            console.log('Status filter:', activeFilters.status)
 
             const response = await api.get(`/admin/products?${params.toString()}`)
             console.log('API response products count:', response.data.products?.length || 0)
@@ -128,6 +146,36 @@ const AdminProductsPage = () => {
         } finally {
             setIsLoading(false)
         }
+    }
+
+    // Handle search change
+    const handleSearchChange = (value: string) => {
+        setSearchTerm(value)
+    }
+
+    // Handle filter change
+    const handleFilterChange = (key: string, value: string) => {
+        setActiveFilters(prev => ({
+            ...prev,
+            [key]: value
+        }))
+    }
+
+    // Handle clear filters
+    const handleClearFilters = () => {
+        setActiveFilters({
+            status: 'ALL'
+        })
+    }
+
+    // Handle export
+    const handleExport = () => {
+        showError('Tính năng xuất dữ liệu đang được phát triển')
+    }
+
+    // Handle refresh
+    const handleRefresh = () => {
+        fetchProducts()
     }
 
     const handleApprove = async (productId: string) => {
@@ -198,29 +246,23 @@ const AdminProductsPage = () => {
             cell: ({ row }) => (
                 <div className="flex flex-col">
                     <span className="font-medium">{row.original.name}</span>
-                    {row.original.sku && (
-                        <span className="text-sm text-gray-500">SKU: {row.original.sku}</span>
-                    )}
-                </div>
-            ),
-        },
-        {
-            accessorKey: "store",
-            header: "Cửa hàng",
-            cell: ({ row }) => (
-                <div className="flex flex-col">
-                    <span className="font-medium">{row.original.store.name}</span>
-                    <span className="text-sm text-gray-500">{row.original.store.owner.name}</span>
+                    <span className="text-sm text-muted-foreground">
+                        {row.original.store.name}
+                    </span>
                 </div>
             ),
         },
         {
             accessorKey: "category",
             header: "Danh mục",
-            cell: ({ row }) => row.original.category?.name || "-",
+            cell: ({ row }) => (
+                <Badge variant="outline">
+                    {row.original.category?.name || 'Không có'}
+                </Badge>
+            ),
         },
         {
-            accessorKey: "originalPrice",
+            accessorKey: "price",
             header: "Giá",
             cell: ({ row }) => (
                 <div className="flex flex-col">
@@ -364,30 +406,6 @@ const AdminProductsPage = () => {
                 </Card>
             </div>
 
-            {/* Filters */}
-            <div className="flex items-center space-x-2">
-                <div className="flex items-center space-x-2">
-                    <Search className="h-4 w-4" />
-                    <Input
-                        placeholder="Tìm kiếm sản phẩm..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="max-w-sm"
-                    />
-                </div>
-                <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value as ProductStatus | 'ALL')}
-                    className="border border-input bg-background px-3 py-2 text-sm rounded-md"
-                >
-                    <option value="ALL">Tất cả trạng thái</option>
-                    <option value="PENDING_APPROVAL">Chờ duyệt</option>
-                    <option value="ACTIVE">Đang bán</option>
-                    <option value="DRAFT">Bản nháp</option>
-                    <option value="INACTIVE">Đã ẩn</option>
-                </select>
-            </div>
-
             {/* Data Table */}
             <Card>
                 <CardHeader>
@@ -416,6 +434,17 @@ const AdminProductsPage = () => {
                             columns={columns}
                             data={filteredProducts}
                             searchKey="name"
+                            searchPlaceholder="Tìm kiếm sản phẩm..."
+                            isLoading={isLoading}
+                            emptyMessage="Không có sản phẩm nào."
+                            filters={filters}
+                            activeFilters={activeFilters}
+                            onFilterChange={handleFilterChange}
+                            onClearFilters={handleClearFilters}
+                            onSearchChange={handleSearchChange}
+                            onExport={handleExport}
+                            onRefresh={handleRefresh}
+                            showToolbar={true}
                         />
                     )}
                 </CardContent>

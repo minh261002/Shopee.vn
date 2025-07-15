@@ -7,13 +7,13 @@ import { ColumnDef } from '@tanstack/react-table'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import Image from 'next/image'
 import { api } from '@/lib/axios'
-import { Truck, Plus, Search, Edit, Trash2, Eye, Settings } from 'lucide-react'
+import { Truck, Plus, Edit, Trash2, Eye, Settings } from 'lucide-react'
 import Link from 'next/link'
+import { FilterOption } from '@/components/dataTables/data-table-toolbar'
 
 interface ShippingProvider {
     id: string
@@ -34,8 +34,24 @@ interface ShippingProvider {
 const ShippingProvidersPage = () => {
     const [providers, setProviders] = useState<ShippingProvider[]>([])
     const [isLoading, setIsLoading] = useState(true)
-    const [searchTerm, setSearchTerm] = useState('')
+    const [activeFilters, setActiveFilters] = useState<Record<string, string>>({
+        status: 'ALL'
+    })
     const router = useRouter()
+
+    // Define filters
+    const filters: FilterOption[] = [
+        {
+            key: 'status',
+            label: 'Trạng thái',
+            type: 'select',
+            placeholder: 'Chọn trạng thái',
+            options: [
+                { value: 'ACTIVE', label: 'Đang hoạt động' },
+                { value: 'INACTIVE', label: 'Không hoạt động' }
+            ]
+        }
+    ]
 
     // Fetch providers
     const fetchProviders = async () => {
@@ -54,6 +70,31 @@ const ShippingProvidersPage = () => {
     useEffect(() => {
         fetchProviders()
     }, [])
+
+    // Handle filter change
+    const handleFilterChange = (key: string, value: string) => {
+        setActiveFilters(prev => ({
+            ...prev,
+            [key]: value
+        }))
+    }
+
+    // Handle clear filters
+    const handleClearFilters = () => {
+        setActiveFilters({
+            status: 'ALL'
+        })
+    }
+
+    // Handle export
+    const handleExport = () => {
+        toast.info('Tính năng xuất dữ liệu đang được phát triển')
+    }
+
+    // Handle refresh
+    const handleRefresh = () => {
+        fetchProviders()
+    }
 
     // Handle view
     const handleView = (provider: ShippingProvider) => {
@@ -182,6 +223,7 @@ const ShippingProvidersPage = () => {
         },
         {
             id: "actions",
+            header: "Thao tác",
             cell: ({ row }) => (
                 <DataTableRowActions
                     row={row}
@@ -216,12 +258,6 @@ const ShippingProvidersPage = () => {
         },
     ]
 
-    const filteredProviders = providers.filter(provider =>
-        provider.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        provider.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        provider.description?.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-
     return (
         <div className="space-y-6">
             <Card>
@@ -242,19 +278,6 @@ const ShippingProvidersPage = () => {
                     </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    {/* Search */}
-                    <div className="flex items-center gap-4">
-                        <div className="relative flex-1 max-w-sm">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                            <Input
-                                placeholder="Tìm kiếm nhà vận chuyển..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-10"
-                            />
-                        </div>
-                    </div>
-
                     {/* Stats */}
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div className="p-4 bg-blue-50 rounded-lg">
@@ -283,11 +306,18 @@ const ShippingProvidersPage = () => {
 
                     <DataTable
                         columns={columns}
-                        data={filteredProviders}
+                        data={providers}
                         searchKey="name"
                         searchPlaceholder="Tìm kiếm nhà vận chuyển..."
                         isLoading={isLoading}
                         emptyMessage="Không có nhà vận chuyển nào."
+                        filters={filters}
+                        activeFilters={activeFilters}
+                        onFilterChange={handleFilterChange}
+                        onClearFilters={handleClearFilters}
+                        onExport={handleExport}
+                        onRefresh={handleRefresh}
+                        showToolbar={true}
                     />
                 </CardContent>
             </Card>

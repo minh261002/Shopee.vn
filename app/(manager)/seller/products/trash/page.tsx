@@ -4,9 +4,8 @@ import React, { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { DataTable } from '@/components/dataTables/data-table'
-import { Package, RotateCcw, Trash2, Eye, MoreHorizontal, Search } from 'lucide-react'
+import { Package, RotateCcw, Trash2, Eye, MoreHorizontal } from 'lucide-react'
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -24,6 +23,7 @@ import { vi } from 'date-fns/locale'
 import { ProductStatus } from '@prisma/client'
 import { useToast } from '@/hooks/use-toast'
 import { Checkbox } from '@/components/ui/checkbox'
+import { FilterOption } from '@/components/dataTables/data-table-toolbar'
 
 // Local type matching our API response
 interface Product {
@@ -52,10 +52,27 @@ const TrashProductsList = () => {
     const { success, error: showError } = useToast()
     const [products, setProducts] = useState<Product[]>([])
     const [isLoading, setIsLoading] = useState(true)
-    const [searchTerm, setSearchTerm] = useState('')
     const [selectedProducts, setSelectedProducts] = useState<string[]>([])
     const [isBulkRestoring, setIsBulkRestoring] = useState(false)
+    const [activeFilters, setActiveFilters] = useState<Record<string, string>>({
+        category: 'ALL',
+        stock: 'ALL'
+    })
     const { currentStore } = useStore()
+
+    // Define filters
+    const filters: FilterOption[] = [
+        {
+            key: 'stock',
+            label: 'Tồn kho',
+            type: 'select',
+            placeholder: 'Chọn trạng thái tồn kho',
+            options: [
+                { value: 'IN_STOCK', label: 'Còn hàng' },
+                { value: 'OUT_OF_STOCK', label: 'Hết hàng' }
+            ]
+        }
+    ]
 
     useEffect(() => {
         const fetchProducts = async () => {
@@ -77,6 +94,46 @@ const TrashProductsList = () => {
 
         fetchProducts()
     }, [showError, currentStore])
+
+    // Handle filter change
+    const handleFilterChange = (key: string, value: string) => {
+        setActiveFilters(prev => ({
+            ...prev,
+            [key]: value
+        }))
+    }
+
+    // Handle clear filters
+    const handleClearFilters = () => {
+        setActiveFilters({
+            category: 'ALL',
+            stock: 'ALL'
+        })
+    }
+
+    // Handle export
+    const handleExport = () => {
+        showError('Tính năng xuất dữ liệu đang được phát triển')
+    }
+
+    // Handle refresh
+    const handleRefresh = () => {
+        if (currentStore) {
+            const fetchProducts = async () => {
+                try {
+                    setIsLoading(true)
+                    const response = await api.get(`/seller/products/trash?storeId=${currentStore.id}`)
+                    setProducts(response.data.products || [])
+                } catch (error) {
+                    console.error('Error fetching deleted products:', error)
+                    showError('Không thể tải danh sách sản phẩm đã ẩn')
+                } finally {
+                    setIsLoading(false)
+                }
+            }
+            fetchProducts()
+        }
+    }
 
     const handleRestore = async (productId: string) => {
         try {
@@ -111,10 +168,10 @@ const TrashProductsList = () => {
     }
 
     const handleSelectAll = () => {
-        if (selectedProducts.length === filteredProducts.length) {
+        if (selectedProducts.length === products.length) {
             setSelectedProducts([])
         } else {
-            setSelectedProducts(filteredProducts.map(p => p.id))
+            setSelectedProducts(products.map(p => p.id))
         }
     }
 
@@ -127,26 +184,16 @@ const TrashProductsList = () => {
     }
 
     const resetFilters = () => {
-        setSearchTerm('')
         setSelectedProducts([])
+        handleClearFilters()
     }
-
-    const filteredProducts = products
-        .filter(product => {
-            const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                product.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                product.category?.name.toLowerCase().includes(searchTerm.toLowerCase())
-
-            return matchesSearch
-        })
-        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
 
     const columns: ColumnDef<Product>[] = [
         {
             id: "select",
             header: () => (
                 <Checkbox
-                    checked={selectedProducts.length === filteredProducts.length}
+                    checked={selectedProducts.length === products.length}
                     onCheckedChange={handleSelectAll}
                     aria-label="Select all"
                 />
@@ -294,7 +341,7 @@ const TrashProductsList = () => {
                     <Button
                         variant="outline"
                         onClick={resetFilters}
-                        disabled={!searchTerm && selectedProducts.length === 0}
+                        disabled={selectedProducts.length === 0}
                     >
                         Đặt lại
                     </Button>
@@ -318,33 +365,21 @@ const TrashProductsList = () => {
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="flex items-center py-4">
-                        <Search className="mr-2 h-4 w-4" />
-                        <Input
-                            placeholder="Tìm kiếm sản phẩm..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="max-w-sm"
-                        />
-                    </div>
-
-                    {filteredProducts.length === 0 ? (
-                        <div className="text-center py-8">
-                            <Package className="mx-auto h-12 w-12 text-gray-400" />
-                            <h3 className="mt-2 text-sm font-medium text-gray-900">
-                                {searchTerm ? 'Không tìm thấy sản phẩm' : 'Không có sản phẩm nào đã ẩn'}
-                            </h3>
-                            <p className="mt-1 text-sm text-gray-500">
-                                {searchTerm ? 'Thử tìm kiếm với từ khóa khác' : 'Các sản phẩm đã ẩn sẽ xuất hiện ở đây'}
-                            </p>
-                        </div>
-                    ) : (
-                        <DataTable
-                            columns={columns}
-                            data={filteredProducts}
-                            searchKey="name"
-                        />
-                    )}
+                    <DataTable
+                        columns={columns}
+                        data={products}
+                        searchKey="name"
+                        searchPlaceholder="Tìm kiếm sản phẩm..."
+                        isLoading={isLoading}
+                        emptyMessage="Không có sản phẩm nào đã ẩn."
+                        filters={filters}
+                        activeFilters={activeFilters}
+                        onFilterChange={handleFilterChange}
+                        onClearFilters={handleClearFilters}
+                        onExport={handleExport}
+                        onRefresh={handleRefresh}
+                        showToolbar={true}
+                    />
                 </CardContent>
             </Card>
         </div>

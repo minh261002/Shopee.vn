@@ -13,6 +13,7 @@ import { api } from '@/lib/axios';
 import type { AffiliateCommission } from '@/types/affiliate';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
+import { FilterOption } from '@/components/dataTables/data-table-toolbar';
 
 interface CommissionsResponse {
     commissions: AffiliateCommission[];
@@ -37,8 +38,25 @@ const CommissionsPage = () => {
         pendingCommission: 0,
         paidCommission: 0,
     });
-    const [statusFilter, setStatusFilter] = useState<string>('ALL');
+    const [activeFilters, setActiveFilters] = useState<Record<string, string>>({
+        status: 'ALL'
+    });
     const router = useRouter();
+
+    // Define filters
+    const filters: FilterOption[] = [
+        {
+            key: 'status',
+            label: 'Trạng thái',
+            type: 'select',
+            placeholder: 'Chọn trạng thái',
+            options: [
+                { value: 'pending', label: 'Chờ thanh toán' },
+                { value: 'approved', label: 'Đã phê duyệt' },
+                { value: 'paid', label: 'Đã thanh toán' }
+            ]
+        }
+    ];
 
     // Fetch commissions
     const fetchCommissions = async (page = 1, status = '', affiliateId = '') => {
@@ -64,8 +82,33 @@ const CommissionsPage = () => {
     };
 
     useEffect(() => {
-        fetchCommissions(1, statusFilter, '');
-    }, [statusFilter]);
+        fetchCommissions(1, activeFilters.status, '');
+    }, [activeFilters.status]);
+
+    // Handle filter change
+    const handleFilterChange = (key: string, value: string) => {
+        setActiveFilters(prev => ({
+            ...prev,
+            [key]: value
+        }));
+    };
+
+    // Handle clear filters
+    const handleClearFilters = () => {
+        setActiveFilters({
+            status: 'ALL'
+        });
+    };
+
+    // Handle export
+    const handleExport = () => {
+        toast.info('Tính năng xuất dữ liệu đang được phát triển');
+    };
+
+    // Handle refresh
+    const handleRefresh = () => {
+        fetchCommissions(1, activeFilters.status, '');
+    };
 
     // Handle view
     const handleView = (commission: AffiliateCommission) => {
@@ -160,6 +203,7 @@ const CommissionsPage = () => {
         },
         {
             id: "actions",
+            header: "Thao tác",
             cell: ({ row }) => {
                 const commission = row.original;
                 const actions = [
@@ -228,20 +272,6 @@ const CommissionsPage = () => {
                 </Card>
             </div>
 
-            {/* Filters */}
-            <div className="flex items-center space-x-2">
-                <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="border border-input bg-background px-3 py-2 text-sm rounded-md"
-                >
-                    <option value="ALL">Tất cả trạng thái</option>
-                    <option value="pending">Chờ thanh toán</option>
-                    <option value="approved">Đã phê duyệt</option>
-                    <option value="paid">Đã thanh toán</option>
-                </select>
-            </div>
-
             {/* Data Table */}
             <Card>
                 <CardHeader>
@@ -254,7 +284,17 @@ const CommissionsPage = () => {
                     <DataTable
                         columns={columns}
                         data={commissions}
+                        searchKey="affiliate"
+                        searchPlaceholder="Tìm kiếm affiliate..."
                         isLoading={isLoading}
+                        emptyMessage="Không có hoa hồng nào."
+                        filters={filters}
+                        activeFilters={activeFilters}
+                        onFilterChange={handleFilterChange}
+                        onClearFilters={handleClearFilters}
+                        onExport={handleExport}
+                        onRefresh={handleRefresh}
+                        showToolbar={true}
                     />
                 </CardContent>
             </Card>

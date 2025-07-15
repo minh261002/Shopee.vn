@@ -17,6 +17,7 @@ import type { UserData, UsersResponse } from '@/types/user';
 const UsersPage = () => {
     const [users, setUsers] = useState<UserData[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
     const [pagination, setPagination] = useState({
         page: 1,
         limit: 10,
@@ -48,8 +49,23 @@ const UsersPage = () => {
     };
 
     useEffect(() => {
-        fetchUsers();
-    }, []);
+        fetchUsers(1, searchTerm);
+    }, [searchTerm]);
+
+    // Handle search change
+    const handleSearchChange = (value: string) => {
+        setSearchTerm(value);
+    };
+
+    // Handle export
+    const handleExport = () => {
+        toast.info('Tính năng xuất dữ liệu đang được phát triển');
+    };
+
+    // Handle refresh
+    const handleRefresh = () => {
+        fetchUsers(1, searchTerm);
+    };
 
     // Handle delete
     const handleDelete = async (user: UserData) => {
@@ -209,7 +225,6 @@ const UsersPage = () => {
 
     return (
         <div className="space-y-6">
-
             <Card>
                 <CardHeader className='flex items-center justify-between'>
                     <div>
@@ -218,7 +233,6 @@ const UsersPage = () => {
                             Tổng cộng {pagination.total} tài khoản
                         </CardDescription>
                     </div>
-
                     <Button onClick={handleAddNew}>
                         <Plus className="h-4 w-4 mr-2" />
                         Thêm tài khoản
@@ -232,6 +246,10 @@ const UsersPage = () => {
                         searchPlaceholder="Tìm kiếm tài khoản..."
                         isLoading={isLoading}
                         emptyMessage="Không có tài khoản nào."
+                        onSearchChange={handleSearchChange}
+                        onExport={handleExport}
+                        onRefresh={handleRefresh}
+                        showToolbar={true}
                     />
                 </CardContent>
             </Card>
