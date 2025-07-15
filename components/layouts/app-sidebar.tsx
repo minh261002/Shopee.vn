@@ -185,6 +185,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             url: "/admin/affiliates",
           },
           {
+            title: "Thêm mới",
+            url: "/admin/affiliates/new",
+          },
+          {
             title: "Hoa hồng",
             url: "/admin/affiliates/commissions",
           },
