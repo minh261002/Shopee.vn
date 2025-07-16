@@ -2,6 +2,7 @@
 
 import { BannerHomeGrid } from '@/components/homePage/BannerHomeGrid';
 import { CategoryGrid } from '@/components/homePage/CategoryGrid';
+import { FlashSaleSection } from '@/components/homePage/FlashSaleSection';
 import Footer from '@/components/layouts/footer';
 import Header from '@/components/layouts/header';
 import MaxWidthWrapper from '@/components/layouts/MaxWidthWrapper';
@@ -56,6 +57,8 @@ export default function HomePage() {
       <div className='mb-10'>
         <CategoryGrid />
       </div>
+
+      <FlashSaleSection />
 
       <Footer />
     </main>

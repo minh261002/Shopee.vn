@@ -61,6 +61,17 @@ export interface ProductBasic {
   originalPrice: number;
   salePrice?: number;
   stock: number;
+  store?: {
+    id: string;
+    name: string;
+    isVerified: boolean;
+    type: string;
+  };
+  images?: Array<{
+    url: string;
+    alt?: string;
+    isMain?: boolean;
+  }>;
 }
 
 // Basic category info for relations

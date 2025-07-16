@@ -21,41 +21,43 @@ enum UserStatus {
 }
 
 model User {
-  id               String                  @id @default(uuid())
-  name             String                  @db.Text
-  email            String
-  emailVerified    Boolean
-  image            String?                 @db.Text
-  role             Role                    @default(USER)
-  createdAt        DateTime
-  updatedAt        DateTime
-  sessions         Session[]
-  accounts         Account[]
-  addresses        UserAddress[]
-  stores           Store[]
-  orders           Order[]
-  carts            Cart[]
-  wishlists        Wishlist[]
-  productReviews   ProductReview[]
-  storeReviews     StoreReview[]
-  storeFollowers   StoreFollower[]
-  notifications    Notification[]
-  couponUsages     CouponUsage[]
-  returnRequests   ReturnRequest[]
-  loyaltyAccount   LoyaltyAccount?
-  supportTickets   SupportTicket[]
-  liveStreams      LiveStream[]
-  streamViews      StreamView[]
-  streamChats      StreamChat[]
-  affiliate        Affiliate?
-  searchQueries    SearchQuery[]
-  recommendations  ProductRecommendation[]
-  behaviors        UserBehavior[]
-  productShares    ProductShare[]
-  following        UserFollow[]            @relation("UserFollowing")
-  followers        UserFollow[]            @relation("UserFollowers")
-  subscriptions    Subscription[]
-  productAuditLogs ProductAuditLog[]
+  id                    String                  @id @default(uuid())
+  name                  String                  @db.Text
+  email                 String
+  emailVerified         Boolean
+  image                 String?                 @db.Text
+  role                  Role                    @default(USER)
+  createdAt             DateTime
+  updatedAt             DateTime
+  sessions              Session[]
+  accounts              Account[]
+  addresses             UserAddress[]
+  stores                Store[]
+  orders                Order[]
+  carts                 Cart[]
+  wishlists             Wishlist[]
+  productReviews        ProductReview[]
+  storeReviews          StoreReview[]
+  storeFollowers        StoreFollower[]
+  notifications         Notification[]
+  couponUsages          CouponUsage[]
+  returnRequests        ReturnRequest[]
+  loyaltyAccount        LoyaltyAccount?
+  supportTickets        SupportTicket[]
+  liveStreams           LiveStream[]
+  streamViews           StreamView[]
+  streamChats           StreamChat[]
+  affiliate             Affiliate?
+  searchQueries         SearchQuery[]
+  recommendations       ProductRecommendation[]
+  behaviors             UserBehavior[]
+  productShares         ProductShare[]
+  following             UserFollow[]            @relation("UserFollowing")
+  followers             UserFollow[]            @relation("UserFollowers")
+  subscriptions         Subscription[]
+  productAuditLogs      ProductAuditLog[]
+  FlashSaleItemView     FlashSaleItemView[]
+  FlashSaleItemPurchase FlashSaleItemPurchase[]
 
   @@unique([email])
   @@map("users")
@@ -882,11 +884,12 @@ model Order {
   updatedAt DateTime @updatedAt
 
   // Relations
-  items         OrderItem[]
-  payments      Payment[]
-  orderHistory  OrderHistory[]
-  ProductReview ProductReview[]
-  StoreReview   StoreReview[]
+  items                 OrderItem[]
+  payments              Payment[]
+  orderHistory          OrderHistory[]
+  ProductReview         ProductReview[]
+  StoreReview           StoreReview[]
+  FlashSaleItemPurchase FlashSaleItemPurchase[]
 
   @@index([userId])
   @@index([storeId])
@@ -1946,7 +1949,8 @@ model FlashSale {
   updatedAt DateTime @updatedAt
 
   // Relations
-  flashSaleItems FlashSaleItem[]
+  flashSaleItems     FlashSaleItem[]
+  FlashSaleAnalytics FlashSaleAnalytics?
 
   @@index([status])
   @@index([startTime, endTime])
@@ -1977,10 +1981,110 @@ model FlashSaleItem {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Relations
+  views     FlashSaleItemView[]
+  purchases FlashSaleItemPurchase[]
+
   @@unique([flashSaleId, productId])
   @@index([flashSaleId])
   @@index([productId])
   @@map("flash_sale_items")
+}
+
+// Flash Sale Tracking Models
+model FlashSaleItemView {
+  id              String        @id @default(uuid())
+  flashSaleItemId String
+  flashSaleItem   FlashSaleItem @relation(fields: [flashSaleItemId], references: [id], onDelete: Cascade)
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // Session tracking
+  sessionId String?
+  ipAddress String?
+  userAgent String?
+
+  // View details
+  viewDuration Int? // in seconds
+  isFromSearch Boolean @default(false)
+  searchQuery  String?
+
+  createdAt DateTime @default(now())
+
+  @@index([flashSaleItemId])
+  @@index([userId])
+  @@index([sessionId])
+  @@index([createdAt])
+  @@map("flash_sale_item_views")
+}
+
+model FlashSaleItemPurchase {
+  id              String        @id @default(uuid())
+  flashSaleItemId String
+  flashSaleItem   FlashSaleItem @relation(fields: [flashSaleItemId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  quantity   Int
+  unitPrice  Float
+  totalPrice Float
+
+  // Purchase tracking
+  isFirstTimeBuyer Boolean  @default(false)
+  purchaseTime     DateTime @default(now())
+
+  createdAt DateTime @default(now())
+
+  @@unique([orderId, flashSaleItemId])
+  @@index([flashSaleItemId])
+  @@index([userId])
+  @@index([orderId])
+  @@index([createdAt])
+  @@map("flash_sale_item_purchases")
+}
+
+model FlashSaleAnalytics {
+  id          String    @id @default(uuid())
+  flashSaleId String
+  flashSale   FlashSale @relation(fields: [flashSaleId], references: [id], onDelete: Cascade)
+
+  // Overall stats
+  totalViews     Int   @default(0)
+  totalPurchases Int   @default(0)
+  totalRevenue   Float @default(0)
+  conversionRate Float @default(0) // Percentage
+
+  // User engagement
+  uniqueVisitors     Int   @default(0)
+  returningVisitors  Int   @default(0)
+  avgSessionDuration Float @default(0) // in minutes
+
+  // Product performance
+  topPerformingProducts String? // JSON array of product IDs
+  avgDiscountPercent    Float   @default(0)
+
+  // Time-based analytics
+  peakHour Int? // Hour of day with most activity
+  peakDay  String? // Day of week with most activity
+
+  // Geographic data
+  topLocations String? // JSON array of location data
+
+  // Device analytics
+  mobileViews  Int @default(0)
+  desktopViews Int @default(0)
+  tabletViews  Int @default(0)
+
+  updatedAt DateTime @updatedAt
+
+  @@unique([flashSaleId])
+  @@index([flashSaleId])
+  @@map("flash_sale_analytics")
 }
 
 // Affiliate Marketing System

@@ -4,8 +4,12 @@ import { faker } from "@faker-js/faker";
 const prisma = new PrismaClient();
 
 async function main() {
-  // Xoá tất cả data cũ trước khi seed
   console.log("🧹 Cleaning up old data...");
+  await prisma.flashSaleItemPurchase.deleteMany();
+  await prisma.flashSaleItemView.deleteMany();
+  await prisma.flashSaleAnalytics.deleteMany();
+  await prisma.flashSaleItem.deleteMany();
+  await prisma.flashSale.deleteMany();
   await prisma.payment.deleteMany();
   await prisma.orderItem.deleteMany();
   await prisma.order.deleteMany();
@@ -67,22 +71,36 @@ async function main() {
   );
 
   // 2. Store cho seller
-  const stores = await Promise.all(
-    sellers.map((seller, i) =>
-      prisma.store.create({
-        data: {
-          name: faker.company.name(),
-          slug: faker.helpers.slugify(faker.company.name()).toLowerCase() + i,
-          status: "ACTIVE",
-          type: "INDIVIDUAL",
-          ownerId: seller.id,
-          address: faker.location.streetAddress(),
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      })
-    )
-  );
+  const stores = await Promise.all([
+    // Store chính hãng
+    prisma.store.create({
+      data: {
+        name: "Shopee Mall - Chính Hãng",
+        slug: "shopee-mall-chinh-hang",
+        status: "ACTIVE",
+        type: "OFFICIAL",
+        isVerified: true,
+        ownerId: sellers[0].id,
+        address: faker.location.streetAddress(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    }),
+    // Store cá nhân
+    prisma.store.create({
+      data: {
+        name: faker.company.name(),
+        slug: faker.helpers.slugify(faker.company.name()).toLowerCase(),
+        status: "ACTIVE",
+        type: "INDIVIDUAL",
+        isVerified: false,
+        ownerId: sellers[1].id,
+        address: faker.location.streetAddress(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    }),
+  ]);
 
   // 3. Category
   const categoryData = [
@@ -320,8 +338,11 @@ async function main() {
   );
 
   // 5. Product & ProductVariant cho mỗi store
-  for (const store of stores) {
-    for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < stores.length; i++) {
+    const store = stores[i];
+    const productCount = i === 0 ? 5 : 3; // Store chính hãng có nhiều sản phẩm hơn
+
+    for (let j = 0; j < productCount; j++) {
       const product = await prisma.product.create({
         data: {
           name: faker.commerce.productName(),
@@ -332,8 +353,8 @@ async function main() {
           status: "ACTIVE",
           condition: "NEW",
           storeId: store.id,
-          categoryId: categories[i % categories.length].id,
-          brandId: brands[i % brands.length].id,
+          categoryId: categories[j % categories.length].id,
+          brandId: brands[j % brands.length].id,
           originalPrice: Number(
             faker.commerce.price({ min: 100000, max: 1000000 })
           ),
@@ -502,6 +523,63 @@ async function main() {
         },
       });
     }
+  }
+
+  // 10. Flash Sale & Flash Sale Items
+  const now = new Date();
+  const startTime = new Date(now.getTime() - 2 * 60 * 60 * 1000); // Started 2 hours ago
+  const endTime = new Date(now.getTime() + 10 * 60 * 60 * 1000); // Ends in 10 hours
+
+  const flashSale = await prisma.flashSale.create({
+    data: {
+      name: "Flash Sale Siêu Hot",
+      description: "Giảm giá cực sốc cho các sản phẩm chất lượng cao",
+      bannerImage: "https://picsum.photos/1200/300?random=flash",
+      status: "ACTIVE",
+      startTime,
+      endTime,
+      maxQuantityPerUser: 3,
+      minOrderAmount: 100000,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+  });
+
+  // Get some products for flash sale
+  const products = await prisma.product.findMany({
+    take: 8,
+    include: {
+      images: true,
+    },
+  });
+
+  for (let i = 0; i < products.length; i++) {
+    const product = products[i];
+    const originalPrice = product.originalPrice;
+    const discountPercent = faker.number.int({ min: 20, max: 50 });
+    const salePrice = Math.round(originalPrice * (1 - discountPercent / 100));
+    const totalQuantity = faker.number.int({ min: 10, max: 50 });
+    const soldQuantity = faker.number.int({
+      min: 0,
+      max: Math.floor(totalQuantity * 0.7),
+    });
+
+    await prisma.flashSaleItem.create({
+      data: {
+        flashSaleId: flashSale.id,
+        productId: product.id,
+        originalPrice,
+        salePrice,
+        discountPercent,
+        totalQuantity,
+        soldQuantity,
+        remainingQuantity: totalQuantity - soldQuantity,
+        maxPerUser: 2,
+        priority: i + 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
   }
 
   console.log("Seed completed!");
