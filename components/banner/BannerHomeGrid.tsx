@@ -84,7 +84,7 @@ export function BannerHomeGrid() {
         banner.items.slice(0, 2);
 
     return (
-        <>
+        <div>
             <style jsx global>{`
                 .banner-swiper .swiper-button-next,
                 .banner-swiper .swiper-button-prev {
@@ -200,6 +200,6 @@ export function BannerHomeGrid() {
                     </div>
                 </div>
             </MaxWidthWrapper>
-        </>
+        </div>
     );
 } 

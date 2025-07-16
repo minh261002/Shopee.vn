@@ -2,6 +2,7 @@
   "name": "tiki.vn",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
@@ -9,6 +10,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@faker-js/faker": "^9.9.0",
     "@hookform/resolvers": "^5.1.1",
     "@prisma/client": "^6.11.1",
     "@radix-ui/react-accordion": "^1.2.11",
@@ -65,6 +67,7 @@
     "sonner": "^2.0.6",
     "swiper": "^11.2.10",
     "tailwind-merge": "^3.3.1",
+    "ts-morph": "^26.0.0",
     "vaul": "^1.1.2",
     "zod": "^3.25.73"
   },
